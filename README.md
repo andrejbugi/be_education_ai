@@ -1,24 +1,36 @@
-# README
+# BE Education AI Backend (Rails API)
 
-This README would normally document whatever steps are necessary to get the
-application up and running.
+## Setup
+1. Install gems:
+```bash
+bundle install
+```
+2. Create and migrate DB:
+```bash
+bin/rails db:create
+bin/rails db:migrate
+```
+3. Prepare test DB:
+```bash
+RAILS_ENV=test bin/rails db:prepare
+```
+4. Run server:
+```bash
+bin/rails server
+```
 
-Things you may want to cover:
+## API Base
+`/api/v1`
 
-* Ruby version
+Health check:
+`GET /up`
 
-* System dependencies
+## Frontend Login Flow
+Detailed guide with request/response examples:
+[docs/frontend_login_flow.md](/home/andrejbugi/projects/be_education_ai/docs/frontend_login_flow.md)
 
-* Configuration
-
-* Database creation
-
-* Database initialization
-
-* How to run the test suite
-
-* Services (job queues, cache servers, search engines, etc.)
-
-* Deployment instructions
-
-* ...
+## Backend Docs
+- [backend_overview.md](/home/andrejbugi/projects/be_education_ai/docs/backend_overview.md)
+- [phase1_data_model.md](/home/andrejbugi/projects/be_education_ai/docs/phase1_data_model.md)
+- [api_quick_reference.md](/home/andrejbugi/projects/be_education_ai/docs/api_quick_reference.md)
+- [core_flows.md](/home/andrejbugi/projects/be_education_ai/docs/core_flows.md)
