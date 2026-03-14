@@ -30,6 +30,10 @@ class Api::V1::LearningWorkflowEndpointsTest < ActionDispatch::IntegrationTest
         prompt: "Објасни како дојде до одговорот.",
         resource_url: "https://example.com/step-help",
         example_answer: "Прво ги издвојувам податоците...",
+        evaluation_mode: "normalized_text",
+        answer_keys: [
+          { value: "x=5" }
+        ],
         content_json: [{ type: "instruction", text: "Пиши целосни реченици." }]
       }]
     }, headers: auth_headers_for(teacher, school: school)
@@ -38,6 +42,8 @@ class Api::V1::LearningWorkflowEndpointsTest < ActionDispatch::IntegrationTest
     payload = JSON.parse(response.body)
     assert_equal "Нова задача", payload["title"]
     assert_equal "Прочитај материјали пред да почнеш.", payload["teacher_notes"]
+    assert_equal "normalized_text", payload["steps"].first["evaluation_mode"]
+    assert_equal "x=5", payload["steps"].first["answer_keys"].first["value"]
   end
 
   test "student cannot create assignment" do
@@ -140,7 +146,9 @@ class Api::V1::LearningWorkflowEndpointsTest < ActionDispatch::IntegrationTest
       assignment: assignment,
       prompt: "Одговори со свои зборови.",
       resource_url: "https://example.com/step-resource",
-      example_answer: "Пример одговор"
+      example_answer: "Пример одговор",
+      evaluation_mode: "normalized_text",
+      answer_keys: [{ value: "x=5" }]
     )
     create_assignment_resource(
       assignment: assignment,
@@ -157,6 +165,28 @@ class Api::V1::LearningWorkflowEndpointsTest < ActionDispatch::IntegrationTest
     assert_equal 1, payload["resources"].length
     assert_equal "Одговори со свои зборови.", payload["steps"].first["prompt"]
     assert_equal "Пример одговор", payload["steps"].first["example_answer"]
+    assert_equal "normalized_text", payload["steps"].first["evaluation_mode"]
+    assert_equal "x=5", payload["steps"].first["answer_keys"].first["value"]
+  end
+
+  test "teacher can update assignment step answer keys" do
+    school = create_school
+    teacher = create_teacher(school: school)
+    classroom = create_classroom(school: school, teacher: teacher)
+    subject = create_subject(school: school, teacher: teacher)
+    assignment = create_assignment(classroom: classroom, subject: subject, teacher: teacher)
+    step = create_assignment_step(assignment: assignment)
+
+    patch "/api/v1/assignments/#{assignment.id}/steps/#{step.id}", params: {
+      evaluation_mode: "numeric",
+      answer_keys: [{ value: "3.14", tolerance: "0.01" }]
+    }, headers: auth_headers_for(teacher, school: school)
+
+    assert_response :success
+    payload = JSON.parse(response.body)
+    assert_equal "numeric", payload["evaluation_mode"]
+    assert_equal "3.14", payload["answer_keys"].first["value"]
+    assert_equal 0.01, payload["answer_keys"].first["tolerance"]
   end
 
   test "teacher can upload assignment resource file" do

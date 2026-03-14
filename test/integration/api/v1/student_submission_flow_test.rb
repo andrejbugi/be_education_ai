@@ -31,7 +31,8 @@ class Api::V1::StudentSubmissionFlowTest < ActionDispatch::IntegrationTest
       status: :published,
       due_at: 2.days.from_now
     )
-    step = AssignmentStep.create!(assignment: assignment, position: 1, title: "Чекор 1", content: "Реши")
+    step = AssignmentStep.create!(assignment: assignment, position: 1, title: "Чекор 1", content: "Реши", evaluation_mode: "normalized_text")
+    AssignmentStepAnswerKey.create!(assignment_step: step, value: "x=5", position: 1)
 
     headers = auth_headers_for(student, school: school)
 
@@ -44,7 +45,7 @@ class Api::V1::StudentSubmissionFlowTest < ActionDispatch::IntegrationTest
       step_answers: [
         {
           assignment_step_id: step.id,
-          answer_text: "42"
+          answer_text: "x = 5"
         }
       ]
     }, headers: headers
@@ -52,6 +53,7 @@ class Api::V1::StudentSubmissionFlowTest < ActionDispatch::IntegrationTest
     assert_response :success
     updated = JSON.parse(response.body)
     assert_equal "in_progress", updated["status"]
+    assert_equal "correct", updated["step_answers"].first["status"]
 
     post "/api/v1/submissions/#{submission_id}/submit", headers: headers
     assert_response :success

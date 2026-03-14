@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_03_14_182942) do
+ActiveRecord::Schema[8.0].define(version: 2026_03_14_194002) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -135,6 +135,19 @@ ActiveRecord::Schema[8.0].define(version: 2026_03_14_182942) do
     t.index ["resource_type"], name: "index_assignment_resources_on_resource_type"
   end
 
+  create_table "assignment_step_answer_keys", force: :cascade do |t|
+    t.bigint "assignment_step_id", null: false
+    t.text "value", null: false
+    t.integer "position", default: 1, null: false
+    t.decimal "tolerance", precision: 10, scale: 4
+    t.boolean "case_sensitive", default: false, null: false
+    t.jsonb "metadata", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["assignment_step_id", "position"], name: "index_answer_keys_on_step_id_and_position", unique: true
+    t.index ["assignment_step_id"], name: "index_assignment_step_answer_keys_on_assignment_step_id"
+  end
+
   create_table "assignment_steps", force: :cascade do |t|
     t.bigint "assignment_id", null: false
     t.integer "position", null: false
@@ -149,8 +162,10 @@ ActiveRecord::Schema[8.0].define(version: 2026_03_14_182942) do
     t.string "resource_url"
     t.text "example_answer"
     t.jsonb "content_json", default: [], null: false
+    t.string "evaluation_mode", default: "manual", null: false
     t.index ["assignment_id", "position"], name: "index_assignment_steps_on_assignment_id_and_position", unique: true
     t.index ["assignment_id"], name: "index_assignment_steps_on_assignment_id"
+    t.index ["evaluation_mode"], name: "index_assignment_steps_on_evaluation_mode"
   end
 
   create_table "assignments", force: :cascade do |t|
@@ -479,6 +494,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_03_14_182942) do
   add_foreign_key "announcements", "subjects"
   add_foreign_key "announcements", "users", column: "author_id"
   add_foreign_key "assignment_resources", "assignments"
+  add_foreign_key "assignment_step_answer_keys", "assignment_steps"
   add_foreign_key "assignment_steps", "assignments"
   add_foreign_key "assignments", "classrooms"
   add_foreign_key "assignments", "subjects"

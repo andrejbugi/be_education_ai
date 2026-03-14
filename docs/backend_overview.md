@@ -12,6 +12,8 @@
 - Classrooms and subjects
 - Assignments and steps
 - Submissions and grades
+- Assignment resources and file uploads
+- Step answer checking
 - Comments
 - Calendar
 - Notifications
@@ -31,6 +33,13 @@
 - `student` endpoints for student dashboard and student assignment views.
 - `teacher` endpoints for teacher dashboard and grading/assignment management.
 - `admin` can access teacher/admin-level areas.
+
+## Assignment capabilities
+- assignments support rich `content_json`, teacher notes, and assignment-level resources
+- assignment resources support uploaded files via Active Storage and link/embed resources
+- steps support `evaluation_mode` and related answer keys for auto-checking
+- student assignment reads do not expose answer keys
+- step answer saves can now return `answered`, `correct`, or `incorrect`
 
 ## Code layout
 - Controllers: `app/controllers/api/v1/...`

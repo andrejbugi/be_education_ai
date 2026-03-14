@@ -40,7 +40,7 @@ module Assignments
     def create_steps!(assignment)
       step_params.each_with_index do |step, index|
         step = step.with_indifferent_access
-        assignment.assignment_steps.create!(
+        assignment_step = assignment.assignment_steps.create!(
           position: step[:position].presence || (index + 1),
           title: step[:title],
           content: step[:content],
@@ -50,8 +50,10 @@ module Assignments
           step_type: step[:step_type].presence || "text",
           required: step.key?(:required) ? step[:required] : true,
           metadata: step[:metadata] || {},
-          content_json: step[:content_json] || []
+          content_json: step[:content_json] || [],
+          evaluation_mode: step[:evaluation_mode].presence || "manual"
         )
+        create_answer_keys!(assignment_step, step[:answer_keys])
       end
     end
 
@@ -71,6 +73,19 @@ module Assignments
         )
         assignment_resource.file.attach(resource[:file]) if resource[:file].present?
         assignment_resource.save!
+      end
+    end
+
+    def create_answer_keys!(assignment_step, answer_keys)
+      Array(answer_keys).each_with_index do |answer_key, index|
+        answer_key = answer_key.with_indifferent_access
+        assignment_step.assignment_step_answer_keys.create!(
+          value: answer_key[:value],
+          position: answer_key[:position].presence || (index + 1),
+          tolerance: answer_key[:tolerance],
+          case_sensitive: ActiveModel::Type::Boolean.new.cast(answer_key[:case_sensitive]) || false,
+          metadata: answer_key[:metadata] || {}
+        )
       end
     end
   end

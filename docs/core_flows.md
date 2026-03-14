@@ -11,14 +11,18 @@
 
 ## 2. Teacher creates and publishes assignment
 1. `POST /api/v1/assignments` with `classroom_id`, `subject_id`, and optional `steps`.
-2. Assignment starts as `draft` unless status is set.
-3. `POST /api/v1/assignments/:id/publish` to publish and notify students.
+2. Steps can use `evaluation_mode` plus `answer_keys` for auto-checked responses.
+3. Steps that use `manual` evaluation stay review-based.
+4. `POST /api/v1/assignments/:id/publish` to publish and notify students.
+5. Assignment starts as `draft` unless status is set.
 
 ## 3. Student submission flow
 1. `POST /api/v1/assignments/:assignment_id/submissions` starts submission.
 2. `PATCH /api/v1/submissions/:id` saves step answers.
-3. `POST /api/v1/submissions/:id/submit` finalizes submission.
-4. Status becomes `submitted` or `late`.
+3. Auto-checkable steps can immediately mark step answers `correct` or `incorrect`.
+4. Manual-review steps remain `answered`.
+5. `POST /api/v1/submissions/:id/submit` finalizes submission.
+6. Status becomes `submitted` or `late`.
 
 ## 4. Teacher grading flow
 1. `POST /api/v1/submissions/:submission_id/grades` with score/feedback.

@@ -2,6 +2,7 @@ module Api
   module V1
     class AssignmentsController < BaseController
       include AssignmentResourceSerialization
+      include AssignmentStepSerialization
 
       before_action :set_assignment, only: %i[show update publish]
 
@@ -60,7 +61,7 @@ module Api
       private
 
       def set_assignment
-        @assignment = Assignment.includes(:assignment_steps, :classroom, :subject, assignment_resources: { file_attachment: :blob }).find_by(id: params[:id])
+        @assignment = Assignment.includes({ assignment_steps: :assignment_step_answer_keys }, :classroom, :subject, assignment_resources: { file_attachment: :blob }).find_by(id: params[:id])
         render_not_found unless @assignment
       end
 
@@ -150,9 +151,10 @@ module Api
       def normalized_steps
         Array(assignment_request_params[:steps]).map.with_index do |step, index|
           raw_step = step.respond_to?(:to_unsafe_h) ? step.to_unsafe_h : step.to_h
-          raw_step.symbolize_keys.slice(:position, :title, :content, :prompt, :resource_url, :example_answer, :step_type, :required, :metadata).merge(
+          raw_step.symbolize_keys.slice(:position, :title, :content, :prompt, :resource_url, :example_answer, :step_type, :required, :metadata, :evaluation_mode).merge(
             position: raw_step["position"].presence || raw_step[:position].presence || (index + 1),
-            content_json: normalized_content_blocks(raw_step["content_json"] || raw_step[:content_json])
+            content_json: normalized_content_blocks(raw_step["content_json"] || raw_step[:content_json]),
+            answer_keys: normalized_answer_keys(raw_step["answer_keys"] || raw_step[:answer_keys])
           )
         end
       end
@@ -161,6 +163,15 @@ module Api
         Array(assignment_request_params[:resources]).map do |resource|
           raw_resource = resource.respond_to?(:to_unsafe_h) ? resource.to_unsafe_h : resource.to_h
           raw_resource.symbolize_keys.slice(:title, :resource_type, :file_url, :external_url, :embed_url, :description, :position, :is_required, :metadata, :file)
+        end
+      end
+
+      def normalized_answer_keys(raw_value)
+        Array(raw_value).map.with_index do |answer_key, index|
+          raw_answer_key = answer_key.respond_to?(:to_unsafe_h) ? answer_key.to_unsafe_h : answer_key.to_h
+          raw_answer_key.symbolize_keys.slice(:value, :tolerance, :case_sensitive, :metadata).merge(
+            position: raw_answer_key["position"].presence || raw_answer_key[:position].presence || (index + 1)
+          )
         end
       end
 
@@ -214,6 +225,7 @@ module Api
       end
 
       def assignment_payload(assignment, include_steps: false, include_submission: false)
+        include_answer_keys = can_manage_assignment?(assignment)
         payload = {
           id: assignment.id,
           title: assignment.title,
@@ -240,21 +252,7 @@ module Api
         }
 
         if include_steps
-          payload[:steps] = assignment.assignment_steps.map do |step|
-            {
-              id: step.id,
-              position: step.position,
-              title: step.title,
-              content: step.content,
-              prompt: step.prompt,
-              resource_url: step.resource_url,
-              example_answer: step.example_answer,
-              step_type: step.step_type,
-              required: step.required,
-              metadata: step.metadata,
-              content_json: step.content_json
-            }
-          end
+          payload[:steps] = assignment.assignment_steps.map { |step| serialize_assignment_step(step, include_answer_keys: include_answer_keys) }
           payload[:resources] = assignment.assignment_resources.map { |resource| serialize_assignment_resource(resource) }
         end
 

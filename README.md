@@ -34,5 +34,7 @@ Detailed guide with request/response examples:
 - [phase1_data_model.md](/home/andrejbugi/projects/be_education_ai/docs/phase1_data_model.md)
 - [api_quick_reference.md](/home/andrejbugi/projects/be_education_ai/docs/api_quick_reference.md)
 - [core_flows.md](/home/andrejbugi/projects/be_education_ai/docs/core_flows.md)
+- [assignment_model_data.md](/home/andrejbugi/projects/be_education_ai/docs/assignment_model_data.md)
+- [frontend_assignment_submission_checks_guide.md](/home/andrejbugi/projects/be_education_ai/docs/frontend_assignment_submission_checks_guide.md)
 - [schools_frontend_guide.md](/home/andrejbugi/projects/be_education_ai/docs/schools_frontend_guide.md)
 - [seeded_school_data_summary.md](/home/andrejbugi/projects/be_education_ai/docs/seeded_school_data_summary.md)

@@ -3,6 +3,7 @@ module Api
     module Student
       class AssignmentsController < BaseController
         include AssignmentResourceSerialization
+        include AssignmentStepSerialization
 
         before_action :require_student!
 
@@ -21,7 +22,7 @@ module Api
         end
 
         def show
-          assignment = Assignment.includes(:assignment_steps, :subject, :teacher, :classroom, assignment_resources: { file_attachment: :blob })
+          assignment = Assignment.includes({ assignment_steps: :assignment_step_answer_keys }, :subject, :teacher, :classroom, assignment_resources: { file_attachment: :blob })
                                  .find_by(id: params[:id])
           return render_not_found unless assignment
 
@@ -64,9 +65,7 @@ module Api
           }
 
           if include_steps
-            payload[:steps] = assignment.assignment_steps.map do |step|
-              step.as_json(only: %i[id position title content prompt resource_url example_answer step_type required metadata content_json])
-            end
+            payload[:steps] = assignment.assignment_steps.map { |step| serialize_assignment_step(step) }
             payload[:resources] = assignment.assignment_resources.map { |resource| serialize_assignment_resource(resource) }
           end
 

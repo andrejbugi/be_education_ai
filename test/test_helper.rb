@@ -155,8 +155,8 @@ module ApiTestFactory
     )
   end
 
-  def create_assignment_step(assignment:, position: 1, title: nil, prompt: "Одговори на прашањето", resource_url: nil, example_answer: nil, content_json: nil)
-    AssignmentStep.create!(
+  def create_assignment_step(assignment:, position: 1, title: nil, prompt: "Одговори на прашањето", resource_url: nil, example_answer: nil, content_json: nil, evaluation_mode: "manual", answer_keys: [])
+    step = AssignmentStep.create!(
       assignment: assignment,
       position: position,
       title: title || "Чекор #{position}",
@@ -166,7 +166,30 @@ module ApiTestFactory
       example_answer: example_answer,
       step_type: "text",
       required: true,
-      content_json: content_json || [{ type: "text", text: "Дополнително објаснување за чекорот." }]
+      content_json: content_json || [{ type: "text", text: "Дополнително објаснување за чекорот." }],
+      evaluation_mode: evaluation_mode
+    )
+    Array(answer_keys).each_with_index do |answer_key, index|
+      create_assignment_step_answer_key(
+        assignment_step: step,
+        value: answer_key[:value] || answer_key["value"],
+        position: answer_key[:position] || answer_key["position"] || (index + 1),
+        tolerance: answer_key[:tolerance] || answer_key["tolerance"],
+        case_sensitive: answer_key.key?(:case_sensitive) ? answer_key[:case_sensitive] : answer_key["case_sensitive"],
+        metadata: answer_key[:metadata] || answer_key["metadata"] || {}
+      )
+    end
+    step
+  end
+
+  def create_assignment_step_answer_key(assignment_step:, value:, position: 1, tolerance: nil, case_sensitive: false, metadata: {})
+    AssignmentStepAnswerKey.create!(
+      assignment_step: assignment_step,
+      value: value,
+      position: position,
+      tolerance: tolerance,
+      case_sensitive: case_sensitive.nil? ? false : case_sensitive,
+      metadata: metadata
     )
   end
 

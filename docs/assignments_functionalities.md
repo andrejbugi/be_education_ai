@@ -157,6 +157,8 @@ Add fields such as:
 - `resource_url`
 - `prompt`
 - `example_answer`
+- `evaluation_mode`
+- `answer_keys`
 
 ## Meaning of each field
 
@@ -191,6 +193,35 @@ FE can render each step with:
 
 ## BE use cases
 BE stores the fields and returns them cleanly in the assignment details payload.
+
+## Answer checking recommendation
+Some steps should support auto-checking, while others should still require teacher review.
+
+Recommended approach:
+- keep answer checking at the `assignment_step` level
+- use `evaluation_mode` to decide how the step is checked
+- store one or more accepted answers in a related `assignment_step_answer_keys` table
+
+Suggested `evaluation_mode` values:
+- `manual`
+- `normalized_text`
+- `numeric`
+- `regex`
+
+Examples:
+- `manual`: essay, explanation, long-form response
+- `normalized_text`: short text/math formats like `x=5`
+- `numeric`: values like `3.14` with optional tolerance
+- `regex`: structured patterns such as IDs or formatted answers
+
+Normalization note for `normalized_text`:
+- collapse whitespace
+- ignore spacing around operators such as `=`, `+`, `-`, `*`, `/`
+- allow `x = 5`, `x= 5`, `x =5`, and `x=5` to match the same answer key
+
+Security note:
+- teacher/admin assignment payloads may include answer keys
+- student assignment payloads must not include answer keys
 
 ---
 

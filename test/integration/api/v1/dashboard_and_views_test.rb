@@ -144,7 +144,9 @@ class Api::V1::DashboardAndViewsTest < ActionDispatch::IntegrationTest
       assignment: assignment,
       prompt: "Реши и образложи.",
       resource_url: "https://example.com/resource",
-      example_answer: "Пример"
+      example_answer: "Пример",
+      evaluation_mode: "normalized_text",
+      answer_keys: [{ value: "x=5" }]
     )
     create_assignment_resource(
       assignment: assignment,
@@ -164,6 +166,8 @@ class Api::V1::DashboardAndViewsTest < ActionDispatch::IntegrationTest
     assert_equal "Прочитај го ресурсот пред решавање.", payload["teacher_notes"]
     assert_equal "Реши и образложи.", payload["steps"].first["prompt"]
     assert_equal submission.id, payload["submission"]["id"]
+    assert_equal "normalized_text", payload["steps"].first["evaluation_mode"]
+    assert_nil payload["steps"].first["answer_keys"]
     assert_equal "material.txt", payload["resources"].first.dig("uploaded_file", "filename")
     assert_includes payload["resources"].first["file_url"], "/rails/active_storage/blobs/"
   end

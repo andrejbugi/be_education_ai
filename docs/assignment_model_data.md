@@ -13,6 +13,8 @@ Assignments now support:
   - `resource_url`
   - `example_answer`
   - `content_json`
+  - `evaluation_mode`
+  - teacher-only `answer_keys`
 
 ## Main assignment fields
 Returned on assignment details endpoints:
@@ -95,6 +97,18 @@ Each step now includes:
 - `required`
 - `metadata`
 - `content_json`
+- `evaluation_mode`
+
+Teacher/admin assignment detail responses also include:
+- `answer_keys`
+
+Student assignment detail responses do not include `answer_keys`.
+
+Supported `evaluation_mode` values:
+- `manual`
+- `normalized_text`
+- `numeric`
+- `regex`
 
 Example step:
 ```json
@@ -109,8 +123,30 @@ Example step:
   "step_type": "reading",
   "required": true,
   "metadata": { "estimated_minutes": 10 },
+  "evaluation_mode": "manual",
   "content_json": [
     { "type": "text", "text": "Запиши ги поимите со кратко објаснување." }
+  ]
+}
+```
+
+Teacher step example with answer keys:
+```json
+{
+  "id": 18,
+  "position": 2,
+  "title": "Реши равенка",
+  "content": "Изолирај x",
+  "evaluation_mode": "normalized_text",
+  "answer_keys": [
+    {
+      "id": 3,
+      "value": "x=5",
+      "position": 1,
+      "tolerance": null,
+      "case_sensitive": false,
+      "metadata": {}
+    }
   ]
 }
 ```
@@ -132,6 +168,8 @@ Teacher create/update can now send:
 - `content_json`
 - `resources`
 - richer `steps` with `prompt`, `resource_url`, `example_answer`, `content_json`
+- per-step `evaluation_mode`
+- per-step `answer_keys`
 
 For actual file uploads, use multipart form data against `POST /api/v1/assignments/:assignment_id/resources` with:
 - `title`
@@ -161,6 +199,16 @@ Example top-level create/update fields:
       "description": "Главен материјал",
       "position": 1,
       "is_required": true
+    }
+  ],
+  "steps": [
+    {
+      "title": "Реши равенка",
+      "content": "2x + 3 = 13",
+      "evaluation_mode": "normalized_text",
+      "answer_keys": [
+        { "value": "x=5" }
+      ]
     }
   ]
 }
@@ -199,3 +247,10 @@ Example multipart upload response:
   - optional `resource_url`
   - optional `example_answer`
   - optional step `content_json`
+  - optional `evaluation_mode` badge or helper text for teacher/admin UI
+
+## Submission checking notes
+- `manual` steps stay in `answered` until reviewed by a teacher or admin
+- `normalized_text`, `numeric`, and `regex` steps are auto-checked when students save answers
+- `normalized_text` ignores spacing around operators, so values like `x = 5` and `x=5` match
+- submission step answer statuses can now naturally move between `answered`, `correct`, and `incorrect`

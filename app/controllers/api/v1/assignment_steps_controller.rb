@@ -1,6 +1,8 @@
 module Api
   module V1
     class AssignmentStepsController < BaseController
+      include AssignmentStepSerialization
+
       before_action :set_assignment
 
       def create
@@ -10,7 +12,7 @@ module Api
 
         step = @assignment.assignment_steps.new(step_params)
         step.content_json = normalized_content_json if step_request_params.key?(:content_json)
-        if step.save
+        if save_step_with_answer_keys(step)
           render json: serialize_step(step), status: :created
         else
           render json: { errors: step.errors.full_messages }, status: :unprocessable_entity
@@ -27,8 +29,9 @@ module Api
 
         attributes = step_params.to_h
         attributes[:content_json] = normalized_content_json if step_request_params.key?(:content_json)
+        step.assign_attributes(attributes)
 
-        if step.update(attributes)
+        if save_step_with_answer_keys(step)
           render json: serialize_step(step)
         else
           render json: { errors: step.errors.full_messages }, status: :unprocessable_entity
@@ -55,9 +58,10 @@ module Api
           "resource_url",
           "example_answer",
           "step_type",
+          "evaluation_mode",
           "required",
           "metadata"
-        )).permit(:position, :title, :content, :prompt, :resource_url, :example_answer, :step_type, :required, metadata: {})
+        )).permit(:position, :title, :content, :prompt, :resource_url, :example_answer, :step_type, :evaluation_mode, :required, metadata: {})
       end
 
       def step_request_params
@@ -73,8 +77,42 @@ module Api
         value.respond_to?(:to_unsafe_h) ? value.to_unsafe_h : value
       end
 
+      def normalized_answer_keys
+        Array(step_request_params[:answer_keys]).map.with_index do |answer_key, index|
+          raw_answer_key = answer_key.respond_to?(:to_unsafe_h) ? answer_key.to_unsafe_h : answer_key.to_h
+          raw_answer_key.symbolize_keys.slice(:value, :tolerance, :case_sensitive, :metadata).merge(
+            position: raw_answer_key["position"].presence || raw_answer_key[:position].presence || (index + 1)
+          )
+        end
+      end
+
+      def save_step_with_answer_keys(step)
+        AssignmentStep.transaction do
+          step.save!
+          sync_answer_keys!(step) if step_request_params.key?(:answer_keys)
+        end
+
+        true
+      rescue ActiveRecord::RecordInvalid
+        false
+      end
+
+      def sync_answer_keys!(step)
+        step.assignment_step_answer_keys.destroy_all
+
+        normalized_answer_keys.each do |answer_key|
+          step.assignment_step_answer_keys.create!(
+            value: answer_key[:value],
+            position: answer_key[:position],
+            tolerance: answer_key[:tolerance],
+            case_sensitive: ActiveModel::Type::Boolean.new.cast(answer_key[:case_sensitive]) || false,
+            metadata: answer_key[:metadata] || {}
+          )
+        end
+      end
+
       def serialize_step(step)
-        step.as_json(only: %i[id assignment_id position title content prompt resource_url example_answer step_type required metadata content_json])
+        serialize_assignment_step(step.reload, include_answer_keys: true)
       end
     end
   end

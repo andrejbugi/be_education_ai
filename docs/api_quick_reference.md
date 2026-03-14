@@ -28,12 +28,21 @@ Base path: `/api/v1`
 - `POST /assignments/:id/publish`
 - `POST /assignments/:assignment_id/steps`
 - `PATCH /assignments/:assignment_id/steps/:id`
+- `POST /assignments/:assignment_id/resources`
+- `PATCH /assignments/:assignment_id/resources/:id`
+- `DELETE /assignments/:assignment_id/resources/:id`
 
 ## Submissions and grades
 - `POST /assignments/:assignment_id/submissions`
 - `PATCH /submissions/:id`
 - `POST /submissions/:id/submit`
 - `POST /submissions/:submission_id/grades`
+
+## Assignment checking notes
+- steps support `evaluation_mode`: `manual | normalized_text | numeric | regex`
+- teacher/admin assignment step payloads can include `answer_keys`
+- student assignment payloads do not include `answer_keys`
+- submission step answers may return `answered`, `correct`, or `incorrect`
 
 ## Comments
 - `POST /comments`
