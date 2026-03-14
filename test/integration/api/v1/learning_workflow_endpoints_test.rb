@@ -159,6 +159,30 @@ class Api::V1::LearningWorkflowEndpointsTest < ActionDispatch::IntegrationTest
     assert_equal "Пример одговор", payload["steps"].first["example_answer"]
   end
 
+  test "teacher can upload assignment resource file" do
+    school = create_school
+    teacher = create_teacher(school: school)
+    classroom = create_classroom(school: school, teacher: teacher)
+    subject = create_subject(school: school, teacher: teacher)
+    assignment = create_assignment(classroom: classroom, subject: subject, teacher: teacher)
+
+    post "/api/v1/assignments/#{assignment.id}/resources", params: {
+      title: "Упатство",
+      resource_type: "file",
+      description: "Локално прикачен документ",
+      is_required: true,
+      file: uploaded_test_file(filename: "assignment-guide.txt", content: "Материјал за задачата")
+    }, headers: auth_headers_for(teacher, school: school)
+
+    assert_response :created
+    payload = JSON.parse(response.body)
+    assert_equal "Упатство", payload["title"]
+    assert_equal "assignment-guide.txt", payload.dig("uploaded_file", "filename")
+    assert_includes payload["file_url"], "/rails/active_storage/blobs/"
+    assert_equal 1, assignment.reload.assignment_resources.count
+    assert assignment.assignment_resources.first.file.attached?
+  end
+
   test "teacher can start submission for student" do
     school = create_school
     teacher = create_teacher(school: school)

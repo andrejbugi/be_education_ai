@@ -37,6 +37,7 @@ Rails.application.routes.draw do
       resources :assignments, only: %i[index create show update] do
         post :publish, on: :member
         resources :steps, only: %i[create update], controller: "assignment_steps"
+        resources :resources, only: %i[create update destroy], controller: "assignment_resources"
         resources :submissions, only: :create, controller: "submissions"
       end
 

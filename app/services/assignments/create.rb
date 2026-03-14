@@ -58,10 +58,10 @@ module Assignments
     def create_resources!(assignment)
       resource_params.each_with_index do |resource, index|
         resource = resource.with_indifferent_access
-        assignment.assignment_resources.create!(
+        assignment_resource = assignment.assignment_resources.new(
           title: resource[:title],
           resource_type: resource[:resource_type],
-          file_url: resource[:file_url],
+          file_url: resource[:file].present? ? nil : resource[:file_url],
           external_url: resource[:external_url],
           embed_url: resource[:embed_url],
           description: resource[:description],
@@ -69,6 +69,8 @@ module Assignments
           is_required: resource[:is_required] || false,
           metadata: resource[:metadata] || {}
         )
+        assignment_resource.file.attach(resource[:file]) if resource[:file].present?
+        assignment_resource.save!
       end
     end
   end

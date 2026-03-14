@@ -9,7 +9,7 @@ module Api
         return render_forbidden unless can_manage_assignment?
 
         step = @assignment.assignment_steps.new(step_params)
-        step.content_json = normalized_content_json if params.key?(:content_json)
+        step.content_json = normalized_content_json if step_request_params.key?(:content_json)
         if step.save
           render json: serialize_step(step), status: :created
         else
@@ -26,7 +26,7 @@ module Api
         return render_not_found unless step
 
         attributes = step_params.to_h
-        attributes[:content_json] = normalized_content_json if params.key?(:content_json)
+        attributes[:content_json] = normalized_content_json if step_request_params.key?(:content_json)
 
         if step.update(attributes)
           render json: serialize_step(step)
@@ -47,11 +47,26 @@ module Api
       end
 
       def step_params
-        params.permit(:position, :title, :content, :prompt, :resource_url, :example_answer, :step_type, :required, metadata: {})
+        ActionController::Parameters.new(step_request_params.to_unsafe_h.slice(
+          "position",
+          "title",
+          "content",
+          "prompt",
+          "resource_url",
+          "example_answer",
+          "step_type",
+          "required",
+          "metadata"
+        )).permit(:position, :title, :content, :prompt, :resource_url, :example_answer, :step_type, :required, metadata: {})
+      end
+
+      def step_request_params
+        wrapped_params = params[:assignment_step]
+        wrapped_params.is_a?(ActionController::Parameters) ? wrapped_params : params
       end
 
       def normalized_content_json
-        value = params[:content_json]
+        value = step_request_params[:content_json]
         return [] if value.blank?
         return value.map { |item| item.respond_to?(:to_unsafe_h) ? item.to_unsafe_h : item } if value.is_a?(Array)
 

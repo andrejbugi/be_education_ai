@@ -149,9 +149,10 @@ class Api::V1::DashboardAndViewsTest < ActionDispatch::IntegrationTest
     create_assignment_resource(
       assignment: assignment,
       title: "PDF материјал",
-      resource_type: "pdf",
-      file_url: "https://example.com/material.pdf"
-    )
+      resource_type: "pdf"
+    ) do |resource|
+      resource.file.attach(uploaded_test_file(filename: "material.txt", content: "Локален материјал"))
+    end
     submission = create_submission(assignment: assignment, student: student, status: :submitted)
 
     get "/api/v1/student/assignments/#{assignment.id}", headers: auth_headers_for(student, school: school)
@@ -163,5 +164,7 @@ class Api::V1::DashboardAndViewsTest < ActionDispatch::IntegrationTest
     assert_equal "Прочитај го ресурсот пред решавање.", payload["teacher_notes"]
     assert_equal "Реши и образложи.", payload["steps"].first["prompt"]
     assert_equal submission.id, payload["submission"]["id"]
+    assert_equal "material.txt", payload["resources"].first.dig("uploaded_file", "filename")
+    assert_includes payload["resources"].first["file_url"], "/rails/active_storage/blobs/"
   end
 end

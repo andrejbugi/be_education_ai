@@ -104,6 +104,11 @@ BE should:
 - return resource metadata to FE
 - allow ordering by `position`
 
+Implementation note:
+- uploaded assignment resources now use Active Storage
+- development uses local disk storage
+- assignment resource payloads return generated file URLs plus uploaded file metadata
+
 ---
 
 # 2. Assignment attachments

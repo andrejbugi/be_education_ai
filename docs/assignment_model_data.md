@@ -5,6 +5,7 @@ Short FE handoff for the richer assignment payload.
 ## What changed
 Assignments now support:
 - assignment-level resources
+- uploaded assignment files through Active Storage
 - richer assignment body blocks through `content_json`
 - teacher-only guidance through `teacher_notes`
 - richer step fields:
@@ -46,6 +47,17 @@ Each resource includes:
 - `position`
 - `is_required`
 - `metadata`
+- `uploaded_file`
+
+`file_url` now works in two ways:
+- for uploaded files, it is the backend-generated download URL
+- for legacy/external file resources, it remains the stored URL
+
+`uploaded_file` is present only when a real file was uploaded and includes:
+- `filename`
+- `byte_size`
+- `content_type`
+- `url`
 
 Supported `resource_type` values:
 - `pdf`
@@ -110,6 +122,9 @@ Example step:
 - `PATCH /api/v1/assignments/:id`
 - `POST /api/v1/assignments/:assignment_id/steps`
 - `PATCH /api/v1/assignments/:assignment_id/steps/:id`
+- `POST /api/v1/assignments/:assignment_id/resources`
+- `PATCH /api/v1/assignments/:assignment_id/resources/:id`
+- `DELETE /api/v1/assignments/:assignment_id/resources/:id`
 
 ## Create/update payload notes
 Teacher create/update can now send:
@@ -117,6 +132,16 @@ Teacher create/update can now send:
 - `content_json`
 - `resources`
 - richer `steps` with `prompt`, `resource_url`, `example_answer`, `content_json`
+
+For actual file uploads, use multipart form data against `POST /api/v1/assignments/:assignment_id/resources` with:
+- `title`
+- `resource_type`
+- optional `description`
+- optional `position`
+- optional `is_required`
+- `file`
+
+Development storage uses local Active Storage disk storage.
 
 Example top-level create/update fields:
 ```json
@@ -138,6 +163,28 @@ Example top-level create/update fields:
       "is_required": true
     }
   ]
+}
+```
+
+Example multipart upload response:
+```json
+{
+  "id": 9,
+  "title": "PDF упатство",
+  "resource_type": "pdf",
+  "file_url": "http://localhost:3000/rails/active_storage/blobs/redirect/...",
+  "external_url": null,
+  "embed_url": null,
+  "description": "Главен материјал",
+  "position": 1,
+  "is_required": true,
+  "metadata": {},
+  "uploaded_file": {
+    "filename": "task.pdf",
+    "byte_size": 48213,
+    "content_type": "application/pdf",
+    "url": "http://localhost:3000/rails/active_storage/blobs/redirect/..."
+  }
 }
 ```
 

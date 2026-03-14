@@ -1,6 +1,7 @@
 ENV["RAILS_ENV"] ||= "test"
 require_relative "../config/environment"
 require "rails/test_help"
+require "tempfile"
 
 if defined?(Rails::LineFiltering) && Minitest::Runnable.method(:run).arity == 3
   module Rails
@@ -170,7 +171,7 @@ module ApiTestFactory
   end
 
   def create_assignment_resource(assignment:, title: "Ресурс", resource_type: "link", position: 1, file_url: nil, external_url: "https://example.com", embed_url: nil, description: "Опис на ресурс", is_required: false)
-    AssignmentResource.create!(
+    resource = AssignmentResource.new(
       assignment: assignment,
       title: title,
       resource_type: resource_type,
@@ -181,6 +182,20 @@ module ApiTestFactory
       description: description,
       is_required: is_required
     )
+    yield resource if block_given?
+    resource.save!
+    resource
+  end
+
+  def uploaded_test_file(filename: "resource.txt", content_type: "text/plain", content: "Test resource file")
+    @uploaded_tempfiles ||= []
+    tempfile = Tempfile.new([File.basename(filename, ".*"), File.extname(filename)])
+    tempfile.binmode
+    tempfile.write(content)
+    tempfile.rewind
+    @uploaded_tempfiles << tempfile
+
+    Rack::Test::UploadedFile.new(tempfile.path, content_type, true, original_filename: filename)
   end
 
   def create_submission(assignment:, student:, status: :submitted, started_at: 2.days.ago, submitted_at: 1.day.ago, reviewed_at: nil, total_score: nil, late: false)

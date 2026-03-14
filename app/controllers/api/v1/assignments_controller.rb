@@ -1,6 +1,8 @@
 module Api
   module V1
     class AssignmentsController < BaseController
+      include AssignmentResourceSerialization
+
       before_action :set_assignment, only: %i[show update publish]
 
       def index
@@ -58,7 +60,7 @@ module Api
       private
 
       def set_assignment
-        @assignment = Assignment.includes(:assignment_steps, :assignment_resources, :classroom, :subject).find_by(id: params[:id])
+        @assignment = Assignment.includes(:assignment_steps, :classroom, :subject, assignment_resources: { file_attachment: :blob }).find_by(id: params[:id])
         render_not_found unless @assignment
       end
 
@@ -88,7 +90,18 @@ module Api
       end
 
       def assignment_params
-        params.permit(
+        ActionController::Parameters.new(assignment_request_params.to_unsafe_h.slice(
+          "subject_id",
+          "classroom_id",
+          "title",
+          "description",
+          "teacher_notes",
+          "assignment_type",
+          "due_at",
+          "max_points",
+          "status",
+          "settings"
+        )).permit(
           :subject_id,
           :classroom_id,
           :title,
@@ -100,12 +113,21 @@ module Api
           :status,
           settings: {},
           steps: [:position, :title, :content, :prompt, :resource_url, :example_answer, :step_type, :required, { metadata: {} }],
-          resources: [:title, :resource_type, :file_url, :external_url, :embed_url, :description, :position, :is_required, { metadata: {} }]
+          resources: [:title, :resource_type, :file_url, :external_url, :embed_url, :description, :position, :is_required, :file, { metadata: {} }]
         )
       end
 
       def update_assignment_params
-        params.permit(
+        ActionController::Parameters.new(assignment_request_params.to_unsafe_h.slice(
+          "title",
+          "description",
+          "teacher_notes",
+          "assignment_type",
+          "due_at",
+          "max_points",
+          "status",
+          "settings"
+        )).permit(
           :title,
           :description,
           :teacher_notes,
@@ -119,14 +141,14 @@ module Api
 
       def normalized_assignment_params
         permitted = assignment_params.to_h.deep_symbolize_keys
-        permitted[:content_json] = normalized_content_blocks(params[:content_json])
+        permitted[:content_json] = normalized_content_blocks(assignment_request_params[:content_json])
         permitted[:steps] = normalized_steps
         permitted[:resources] = normalized_resources
         permitted
       end
 
       def normalized_steps
-        Array(params[:steps]).map.with_index do |step, index|
+        Array(assignment_request_params[:steps]).map.with_index do |step, index|
           raw_step = step.respond_to?(:to_unsafe_h) ? step.to_unsafe_h : step.to_h
           raw_step.symbolize_keys.slice(:position, :title, :content, :prompt, :resource_url, :example_answer, :step_type, :required, :metadata).merge(
             position: raw_step["position"].presence || raw_step[:position].presence || (index + 1),
@@ -136,10 +158,15 @@ module Api
       end
 
       def normalized_resources
-        Array(params[:resources]).map do |resource|
+        Array(assignment_request_params[:resources]).map do |resource|
           raw_resource = resource.respond_to?(:to_unsafe_h) ? resource.to_unsafe_h : resource.to_h
-          raw_resource.symbolize_keys.slice(:title, :resource_type, :file_url, :external_url, :embed_url, :description, :position, :is_required, :metadata)
+          raw_resource.symbolize_keys.slice(:title, :resource_type, :file_url, :external_url, :embed_url, :description, :position, :is_required, :metadata, :file)
         end
+      end
+
+      def assignment_request_params
+        wrapped_params = params[:assignment]
+        wrapped_params.is_a?(ActionController::Parameters) ? wrapped_params : params
       end
 
       def normalized_content_blocks(raw_value)
@@ -155,9 +182,9 @@ module Api
       def update_assignment_with_nested_content(assignment)
         Assignment.transaction do
           attributes = update_assignment_params.to_h
-          attributes[:content_json] = normalized_content_blocks(params[:content_json]) if params.key?(:content_json)
+          attributes[:content_json] = normalized_content_blocks(assignment_request_params[:content_json]) if assignment_request_params.key?(:content_json)
           assignment.update!(attributes)
-          sync_resources!(assignment) if params.key?(:resources)
+          sync_resources!(assignment) if assignment_request_params.key?(:resources)
         end
 
         true
@@ -166,14 +193,14 @@ module Api
       end
 
       def sync_resources!(assignment)
-        assignment.assignment_resources.delete_all
+        assignment.assignment_resources.destroy_all
 
-        Array(assignment_params[:resources]).each_with_index do |resource, index|
+        Array(assignment_request_params[:resources]).each_with_index do |resource, index|
           resource = resource.respond_to?(:to_unsafe_h) ? resource.to_unsafe_h.symbolize_keys : resource.to_h.symbolize_keys
-          assignment.assignment_resources.create!(
+          assignment_resource = assignment.assignment_resources.new(
             title: resource[:title],
             resource_type: resource[:resource_type],
-            file_url: resource[:file_url],
+            file_url: resource[:file].present? ? nil : resource[:file_url],
             external_url: resource[:external_url],
             embed_url: resource[:embed_url],
             description: resource[:description],
@@ -181,6 +208,8 @@ module Api
             is_required: resource[:is_required] || false,
             metadata: resource[:metadata] || {}
           )
+          assignment_resource.file.attach(resource[:file]) if resource[:file].present?
+          assignment_resource.save!
         end
       end
 
@@ -226,20 +255,7 @@ module Api
               content_json: step.content_json
             }
           end
-          payload[:resources] = assignment.assignment_resources.map do |resource|
-            {
-              id: resource.id,
-              title: resource.title,
-              resource_type: resource.resource_type,
-              file_url: resource.file_url,
-              external_url: resource.external_url,
-              embed_url: resource.embed_url,
-              description: resource.description,
-              position: resource.position,
-              is_required: resource.is_required,
-              metadata: resource.metadata
-            }
-          end
+          payload[:resources] = assignment.assignment_resources.map { |resource| serialize_assignment_resource(resource) }
         end
 
         if include_submission && current_user.has_role?("student")
