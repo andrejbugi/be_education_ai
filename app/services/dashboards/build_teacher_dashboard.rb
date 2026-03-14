@@ -21,8 +21,10 @@ module Dashboards
         },
         classroom_count: classroom_ids.size,
         student_count: ClassroomUser.where(classroom_id: classroom_ids).distinct.count(:user_id),
+        homerooms: serialize_homerooms,
         active_assignments: Assignment.where(teacher_id: teacher.id, status: [Assignment.statuses[:published], Assignment.statuses[:scheduled]]).count,
         review_queue: pending_submissions.map { |submission| serialize_submission(submission) },
+        announcement_feed: serialize_announcements,
         upcoming_calendar_events: serialize_events
       }
     end
@@ -56,6 +58,30 @@ module Dashboards
           title: event.title,
           starts_at: event.starts_at,
           event_type: event.event_type
+        }
+      end
+    end
+
+    def serialize_homerooms
+      teacher.homeroom_assignments.active.includes(:classroom).map do |assignment|
+        {
+          homeroom_assignment_id: assignment.id,
+          classroom_id: assignment.classroom_id,
+          classroom_name: assignment.classroom.name,
+          starts_on: assignment.starts_on
+        }
+      end
+    end
+
+    def serialize_announcements
+      return [] unless school
+
+      school.announcements.where(author_id: teacher.id).order(created_at: :desc).limit(5).map do |announcement|
+        {
+          id: announcement.id,
+          title: announcement.title,
+          status: announcement.status,
+          published_at: announcement.published_at
         }
       end
     end

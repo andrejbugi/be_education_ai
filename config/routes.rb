@@ -9,9 +9,26 @@ Rails.application.routes.draw do
 
       resources :schools, only: %i[index show]
       resource :profile, only: %i[show update], controller: "profile"
+      resources :announcements, only: %i[index create show update] do
+        post :publish, on: :member
+        post :archive, on: :member
+      end
+      resources :attendance_records, only: %i[index create update]
+      resources :ai_sessions, only: %i[index create show update] do
+        post :close, on: :member
+        resources :messages, only: %i[index create], controller: "ai_messages"
+      end
+
+      get "classrooms/:classroom_id/attendance", to: "classroom_attendance#show"
+      get "students/:id/attendance", to: "student_attendance#show"
+      post "classrooms/:classroom_id/homeroom_assignment", to: "homeroom_assignments#create"
+      patch "homeroom_assignments/:id", to: "homeroom_assignments#update"
+      get "students/:id/performance_snapshots", to: "student_performance_snapshots#index"
+      get "classrooms/:id/performance_overview", to: "classroom_performance_overviews#show"
 
       namespace :teacher do
         get "dashboard", to: "dashboards#show"
+        get "homerooms", to: "homerooms#index"
         resources :classrooms, only: %i[index show]
         resources :subjects, only: :index
         resources :students, only: :show
@@ -39,6 +56,7 @@ Rails.application.routes.draw do
 
       namespace :student do
         get "dashboard", to: "dashboards#show"
+        get "performance", to: "performance#show"
         resources :assignments, only: %i[index show]
       end
     end

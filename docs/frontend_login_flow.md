@@ -2,6 +2,11 @@
 
 This backend uses JWT bearer auth and optional school context per request.
 
+## 0. Load schools for login dropdown
+`GET /api/v1/schools`
+
+No auth required. Returns active schools for the school selector on the login form.
+
 ## 1. Login request
 `POST /api/v1/auth/login`
 

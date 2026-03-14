@@ -2,10 +2,25 @@ ENV["RAILS_ENV"] ||= "test"
 require_relative "../config/environment"
 require "rails/test_help"
 
+if defined?(Rails::LineFiltering) && Minitest::Runnable.method(:run).arity == 3
+  module Rails
+    module LineFiltering
+      def run(*args, **kwargs)
+        return super(*args, **kwargs) if args.size == 3
+
+        reporter, options = args
+        options ||= {}
+        options = options.merge(filter: Rails::TestUnit::Runner.compose_filter(self, options[:filter]))
+        super(reporter, options, **kwargs)
+      end
+    end
+  end
+end
+
 module ActiveSupport
   class TestCase
     # Run tests in parallel with specified workers
-    parallelize(workers: :number_of_processors)
+    parallelize(workers: 0)
 
     # Setup all fixtures in test/fixtures/*.yml for all tests in alphabetical order.
     fixtures :all
@@ -17,14 +32,163 @@ end
 module ApiAuthHelpers
   def auth_headers_for(user, school: nil)
     token = Auth::JwtToken.encode(
-      user_id: user.id,
-      school_id: school&.id,
-      role_names: user.roles.pluck(:name)
+      {
+        user_id: user.id,
+        school_id: school&.id,
+        role_names: user.roles.pluck(:name)
+      }
     )
-    { "Authorization" => "Bearer #{token}" }
+    headers = { "Authorization" => "Bearer #{token}" }
+    headers["X-School-Id"] = school.id if school
+    headers
+  end
+end
+
+module ApiTestFactory
+  def ensure_base_roles
+    Role::BASE_ROLES.each { |name| Role.find_or_create_by!(name: name) }
+  end
+
+  def unique_value(prefix)
+    @unique_value_counter ||= 0
+    @unique_value_counter += 1
+    "#{prefix}-#{@unique_value_counter}"
+  end
+
+  def create_school(active: true, name: nil, code: nil, city: "Скопје")
+    School.create!(
+      name: name || unique_value("School"),
+      code: code || unique_value("SC"),
+      city: city,
+      active: active
+    )
+  end
+
+  def create_user_with_roles(school:, roles:, email: nil, password: "password123", first_name: "Test", last_name: "User", active: true)
+    ensure_base_roles
+
+    user = User.create!(
+      email: email || "#{unique_value('user')}@example.com",
+      password: password,
+      password_confirmation: password,
+      first_name: first_name,
+      last_name: last_name,
+      active: active
+    )
+
+    roles.each do |role_name|
+      UserRole.create!(user: user, role: Role.find_by!(name: role_name))
+    end
+
+    SchoolUser.create!(school: school, user: user)
+    user
+  end
+
+  def create_teacher(school:, email: nil, first_name: "Teacher", last_name: "User")
+    create_user_with_roles(
+      school: school,
+      roles: %w[teacher],
+      email: email,
+      first_name: first_name,
+      last_name: last_name
+    )
+  end
+
+  def create_student(school:, classroom: nil, email: nil, first_name: "Student", last_name: "User")
+    student = create_user_with_roles(
+      school: school,
+      roles: %w[student],
+      email: email,
+      first_name: first_name,
+      last_name: last_name
+    )
+    ClassroomUser.create!(classroom: classroom, user: student) if classroom
+    student
+  end
+
+  def create_admin(school:, email: nil, first_name: "Admin", last_name: "User")
+    create_user_with_roles(
+      school: school,
+      roles: %w[admin],
+      email: email,
+      first_name: first_name,
+      last_name: last_name
+    )
+  end
+
+  def create_classroom(school:, teacher: nil, name: nil, grade_level: "7", academic_year: "2025/2026")
+    classroom = Classroom.create!(
+      school: school,
+      name: name || unique_value("7-A"),
+      grade_level: grade_level,
+      academic_year: academic_year
+    )
+    TeacherClassroom.create!(classroom: classroom, user: teacher) if teacher
+    classroom
+  end
+
+  def create_subject(school:, teacher: nil, name: nil, code: nil)
+    subject = Subject.create!(
+      school: school,
+      name: name || unique_value("Предмет"),
+      code: code || unique_value("SUB")
+    )
+    TeacherSubject.create!(teacher: teacher, subject: subject) if teacher
+    subject
+  end
+
+  def create_assignment(classroom:, subject:, teacher:, title: nil, status: :published, due_at: 2.days.from_now, published_at: Time.current)
+    Assignment.create!(
+      classroom: classroom,
+      subject: subject,
+      teacher: teacher,
+      title: title || unique_value("Задача"),
+      description: "Опис",
+      assignment_type: "homework",
+      status: status,
+      due_at: due_at,
+      published_at: published_at,
+      max_points: 100
+    )
+  end
+
+  def create_assignment_step(assignment:, position: 1, title: nil)
+    AssignmentStep.create!(
+      assignment: assignment,
+      position: position,
+      title: title || "Чекор #{position}",
+      content: "Содржина",
+      step_type: "text",
+      required: true
+    )
+  end
+
+  def create_submission(assignment:, student:, status: :submitted, started_at: 2.days.ago, submitted_at: 1.day.ago, reviewed_at: nil, total_score: nil, late: false)
+    Submission.create!(
+      assignment: assignment,
+      student: student,
+      status: status,
+      started_at: started_at,
+      submitted_at: submitted_at,
+      reviewed_at: reviewed_at,
+      total_score: total_score,
+      late: late
+    )
+  end
+
+  def create_grade(submission:, teacher:, score: 90, max_score: 100, feedback: "Одлично")
+    Grade.create!(
+      submission: submission,
+      teacher: teacher,
+      score: score,
+      max_score: max_score,
+      feedback: feedback,
+      graded_at: Time.current
+    )
   end
 end
 
 class ActionDispatch::IntegrationTest
   include ApiAuthHelpers
+  include ApiTestFactory
 end

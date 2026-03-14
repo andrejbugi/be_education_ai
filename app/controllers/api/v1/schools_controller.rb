@@ -1,8 +1,10 @@
 module Api
   module V1
     class SchoolsController < BaseController
+      skip_before_action :authenticate_user!, only: :index
+
       def index
-        schools = current_user.schools.order(:name)
+        schools = School.where(active: true).order(:name)
         render json: schools.as_json(only: %i[id name code city active])
       end
 

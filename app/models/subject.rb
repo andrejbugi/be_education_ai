@@ -5,6 +5,9 @@ class Subject < ApplicationRecord
   has_many :teachers, through: :teacher_subjects, source: :teacher
 
   has_many :assignments, dependent: :destroy
+  has_many :announcements, dependent: :nullify
+  has_many :attendance_records, dependent: :nullify
+  has_many :ai_sessions, dependent: :nullify
 
   validates :name, presence: true
 end

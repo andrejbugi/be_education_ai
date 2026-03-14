@@ -8,6 +8,11 @@ class Classroom < ApplicationRecord
   has_many :teachers, through: :teacher_classrooms, source: :user
 
   has_many :assignments, dependent: :destroy
+  has_many :homeroom_assignments, dependent: :destroy
+  has_one :active_homeroom_assignment, -> { where(active: true).order(starts_on: :desc) }, class_name: "HomeroomAssignment"
+  has_many :announcements, dependent: :nullify
+  has_many :attendance_records, dependent: :destroy
+  has_many :student_performance_snapshots, dependent: :nullify
 
   validates :name, presence: true
 end

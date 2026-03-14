@@ -22,6 +22,9 @@ module Dashboards
         next_task: serialize_assignment(assignments.first),
         homework: assignments.map { |assignment| serialize_assignment(assignment) },
         deadlines: serialize_deadlines,
+        announcements: serialize_announcements,
+        performance_snapshot: serialize_performance_snapshot,
+        ai_resume: serialize_ai_resume,
         notifications_unread: student.notifications.unread.count,
         recent_activity: serialize_activity
       }
@@ -72,6 +75,52 @@ module Dashboards
           trackable_id: log.trackable_id
         }
       end
+    end
+
+    def serialize_announcements
+      return [] unless school
+
+      school.announcements.published_visible.order(published_at: :desc).limit(5).select do |announcement|
+        announcement.visible_to?(student)
+      end.map do |announcement|
+        {
+          id: announcement.id,
+          title: announcement.title,
+          priority: announcement.priority,
+          published_at: announcement.published_at
+        }
+      end
+    end
+
+    def serialize_performance_snapshot
+      return nil unless school
+
+      snapshot = PerformanceSnapshots::GenerateForStudent.new(
+        student: student,
+        school: school,
+        period_type: "monthly"
+      ).call.snapshot
+
+      return nil unless snapshot
+
+      {
+        average_grade: snapshot.average_grade,
+        attendance_rate: snapshot.attendance_rate,
+        engagement_score: snapshot.engagement_score,
+        completed_assignments_count: snapshot.completed_assignments_count
+      }
+    end
+
+    def serialize_ai_resume
+      session = student.ai_sessions.where(school_id: school&.id).active.order(last_activity_at: :desc).first
+      return nil unless session
+
+      {
+        session_id: session.id,
+        title: session.title,
+        session_type: session.session_type,
+        last_activity_at: session.last_activity_at
+      }
     end
   end
 end

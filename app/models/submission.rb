@@ -5,6 +5,7 @@ class Submission < ApplicationRecord
   has_many :submission_step_answers, dependent: :destroy
   has_many :grades, dependent: :destroy
   has_many :comments, as: :commentable, dependent: :destroy
+  has_many :ai_sessions, dependent: :nullify
 
   enum :status, {
     not_started: 0,

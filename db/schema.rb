@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_03_12_190022) do
+ActiveRecord::Schema[8.0].define(version: 2026_03_14_100007) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -25,6 +25,68 @@ ActiveRecord::Schema[8.0].define(version: 2026_03_12_190022) do
     t.datetime "updated_at", null: false
     t.index ["trackable_type", "trackable_id"], name: "index_activity_logs_on_trackable"
     t.index ["user_id"], name: "index_activity_logs_on_user_id"
+  end
+
+  create_table "ai_messages", force: :cascade do |t|
+    t.bigint "ai_session_id", null: false
+    t.integer "role", default: 0, null: false
+    t.integer "message_type", default: 0, null: false
+    t.text "content", null: false
+    t.integer "sequence_number", null: false
+    t.jsonb "metadata", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["ai_session_id", "created_at"], name: "index_ai_messages_on_ai_session_id_and_created_at"
+    t.index ["ai_session_id", "sequence_number"], name: "index_ai_messages_on_ai_session_id_and_sequence_number", unique: true
+    t.index ["ai_session_id"], name: "index_ai_messages_on_ai_session_id"
+  end
+
+  create_table "ai_sessions", force: :cascade do |t|
+    t.bigint "school_id", null: false
+    t.bigint "user_id", null: false
+    t.bigint "assignment_id"
+    t.bigint "submission_id"
+    t.bigint "subject_id"
+    t.string "title"
+    t.integer "session_type", default: 0, null: false
+    t.integer "status", default: 0, null: false
+    t.datetime "started_at", null: false
+    t.datetime "last_activity_at", null: false
+    t.datetime "ended_at"
+    t.jsonb "context_data", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["assignment_id"], name: "index_ai_sessions_on_assignment_id"
+    t.index ["school_id"], name: "index_ai_sessions_on_school_id"
+    t.index ["subject_id"], name: "index_ai_sessions_on_subject_id"
+    t.index ["submission_id"], name: "index_ai_sessions_on_submission_id"
+    t.index ["user_id", "status", "last_activity_at"], name: "index_ai_sessions_on_user_id_and_status_and_last_activity_at"
+    t.index ["user_id"], name: "index_ai_sessions_on_user_id"
+  end
+
+  create_table "announcements", force: :cascade do |t|
+    t.bigint "school_id", null: false
+    t.bigint "author_id", null: false
+    t.bigint "classroom_id"
+    t.bigint "subject_id"
+    t.string "title", null: false
+    t.text "body", null: false
+    t.integer "status", default: 0, null: false
+    t.datetime "published_at"
+    t.datetime "starts_at"
+    t.datetime "ends_at"
+    t.integer "priority", default: 0, null: false
+    t.string "audience_type", default: "school", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["author_id"], name: "index_announcements_on_author_id"
+    t.index ["classroom_id", "published_at"], name: "index_announcements_on_classroom_id_and_published_at"
+    t.index ["classroom_id"], name: "index_announcements_on_classroom_id"
+    t.index ["school_id", "published_at"], name: "index_announcements_on_school_id_and_published_at"
+    t.index ["school_id"], name: "index_announcements_on_school_id"
+    t.index ["status"], name: "index_announcements_on_status"
+    t.index ["subject_id", "published_at"], name: "index_announcements_on_subject_id_and_published_at"
+    t.index ["subject_id"], name: "index_announcements_on_subject_id"
   end
 
   create_table "assignment_steps", force: :cascade do |t|
@@ -59,6 +121,27 @@ ActiveRecord::Schema[8.0].define(version: 2026_03_12_190022) do
     t.index ["classroom_id"], name: "index_assignments_on_classroom_id"
     t.index ["subject_id"], name: "index_assignments_on_subject_id"
     t.index ["teacher_id"], name: "index_assignments_on_teacher_id"
+  end
+
+  create_table "attendance_records", force: :cascade do |t|
+    t.bigint "school_id", null: false
+    t.bigint "classroom_id", null: false
+    t.bigint "subject_id"
+    t.bigint "student_id", null: false
+    t.bigint "teacher_id", null: false
+    t.date "attendance_date", null: false
+    t.integer "status", default: 0, null: false
+    t.text "note"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index "student_id, classroom_id, COALESCE(subject_id, (0)::bigint), attendance_date", name: "index_attendance_records_on_student_classroom_subject_date", unique: true
+    t.index ["classroom_id", "attendance_date"], name: "index_attendance_records_on_classroom_id_and_attendance_date"
+    t.index ["classroom_id"], name: "index_attendance_records_on_classroom_id"
+    t.index ["school_id"], name: "index_attendance_records_on_school_id"
+    t.index ["student_id", "attendance_date"], name: "index_attendance_records_on_student_id_and_attendance_date"
+    t.index ["student_id"], name: "index_attendance_records_on_student_id"
+    t.index ["subject_id"], name: "index_attendance_records_on_subject_id"
+    t.index ["teacher_id"], name: "index_attendance_records_on_teacher_id"
   end
 
   create_table "calendar_events", force: :cascade do |t|
@@ -137,6 +220,21 @@ ActiveRecord::Schema[8.0].define(version: 2026_03_12_190022) do
     t.index ["teacher_id"], name: "index_grades_on_teacher_id"
   end
 
+  create_table "homeroom_assignments", force: :cascade do |t|
+    t.bigint "school_id", null: false
+    t.bigint "classroom_id", null: false
+    t.bigint "teacher_id", null: false
+    t.boolean "active", default: true, null: false
+    t.date "starts_on", null: false
+    t.date "ends_on"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["classroom_id"], name: "index_homeroom_assignments_on_classroom_id"
+    t.index ["classroom_id"], name: "index_homeroom_assignments_on_classroom_id_active_unique", unique: true, where: "(active = true)"
+    t.index ["school_id"], name: "index_homeroom_assignments_on_school_id"
+    t.index ["teacher_id"], name: "index_homeroom_assignments_on_teacher_id"
+  end
+
   create_table "notifications", force: :cascade do |t|
     t.bigint "user_id", null: false
     t.bigint "actor_id"
@@ -179,6 +277,32 @@ ActiveRecord::Schema[8.0].define(version: 2026_03_12_190022) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["code"], name: "index_schools_on_code", unique: true
+  end
+
+  create_table "student_performance_snapshots", force: :cascade do |t|
+    t.bigint "school_id", null: false
+    t.bigint "student_id", null: false
+    t.bigint "classroom_id"
+    t.integer "period_type", default: 0, null: false
+    t.date "period_start", null: false
+    t.date "period_end", null: false
+    t.decimal "average_grade", precision: 6, scale: 2
+    t.integer "completed_assignments_count", default: 0, null: false
+    t.integer "in_progress_assignments_count", default: 0, null: false
+    t.integer "overdue_assignments_count", default: 0, null: false
+    t.integer "missed_assignments_count", default: 0, null: false
+    t.decimal "attendance_rate", precision: 6, scale: 2
+    t.decimal "engagement_score", precision: 6, scale: 2
+    t.jsonb "snapshot_data", default: {}, null: false
+    t.datetime "generated_at", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["classroom_id", "period_type", "period_start"], name: "index_performance_snapshots_on_classroom_period"
+    t.index ["classroom_id"], name: "index_student_performance_snapshots_on_classroom_id"
+    t.index ["school_id", "period_type", "period_start"], name: "index_performance_snapshots_on_school_period"
+    t.index ["school_id"], name: "index_student_performance_snapshots_on_school_id"
+    t.index ["student_id", "period_type", "period_start"], name: "index_performance_snapshots_on_student_period"
+    t.index ["student_id"], name: "index_student_performance_snapshots_on_student_id"
   end
 
   create_table "student_profiles", force: :cascade do |t|
@@ -290,10 +414,25 @@ ActiveRecord::Schema[8.0].define(version: 2026_03_12_190022) do
   end
 
   add_foreign_key "activity_logs", "users"
+  add_foreign_key "ai_messages", "ai_sessions"
+  add_foreign_key "ai_sessions", "assignments"
+  add_foreign_key "ai_sessions", "schools"
+  add_foreign_key "ai_sessions", "subjects"
+  add_foreign_key "ai_sessions", "submissions"
+  add_foreign_key "ai_sessions", "users"
+  add_foreign_key "announcements", "classrooms"
+  add_foreign_key "announcements", "schools"
+  add_foreign_key "announcements", "subjects"
+  add_foreign_key "announcements", "users", column: "author_id"
   add_foreign_key "assignment_steps", "assignments"
   add_foreign_key "assignments", "classrooms"
   add_foreign_key "assignments", "subjects"
   add_foreign_key "assignments", "users", column: "teacher_id"
+  add_foreign_key "attendance_records", "classrooms"
+  add_foreign_key "attendance_records", "schools"
+  add_foreign_key "attendance_records", "subjects"
+  add_foreign_key "attendance_records", "users", column: "student_id"
+  add_foreign_key "attendance_records", "users", column: "teacher_id"
   add_foreign_key "calendar_events", "assignments"
   add_foreign_key "calendar_events", "schools"
   add_foreign_key "classroom_users", "classrooms"
@@ -304,10 +443,16 @@ ActiveRecord::Schema[8.0].define(version: 2026_03_12_190022) do
   add_foreign_key "event_participants", "users"
   add_foreign_key "grades", "submissions"
   add_foreign_key "grades", "users", column: "teacher_id"
+  add_foreign_key "homeroom_assignments", "classrooms"
+  add_foreign_key "homeroom_assignments", "schools"
+  add_foreign_key "homeroom_assignments", "users", column: "teacher_id"
   add_foreign_key "notifications", "users"
   add_foreign_key "notifications", "users", column: "actor_id"
   add_foreign_key "school_users", "schools"
   add_foreign_key "school_users", "users"
+  add_foreign_key "student_performance_snapshots", "classrooms"
+  add_foreign_key "student_performance_snapshots", "schools"
+  add_foreign_key "student_performance_snapshots", "users", column: "student_id"
   add_foreign_key "student_profiles", "schools"
   add_foreign_key "student_profiles", "users"
   add_foreign_key "subjects", "schools"

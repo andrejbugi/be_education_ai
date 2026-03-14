@@ -1,0 +1,224 @@
+require "test_helper"
+
+class Api::V1::LearningWorkflowEndpointsTest < ActionDispatch::IntegrationTest
+  test "teacher can create assignment with steps" do
+    school = create_school
+    teacher = create_teacher(school: school)
+    classroom = create_classroom(school: school, teacher: teacher)
+    subject = create_subject(school: school, teacher: teacher)
+
+    post "/api/v1/assignments", params: {
+      classroom_id: classroom.id,
+      subject_id: subject.id,
+      title: "Нова задача",
+      description: "Опис",
+      assignment_type: "homework",
+      due_at: 2.days.from_now,
+      max_points: 100,
+      steps: [{ position: 1, title: "Чекор 1", content: "Реши" }]
+    }, headers: auth_headers_for(teacher, school: school)
+
+    assert_response :created
+    payload = JSON.parse(response.body)
+    assert_equal "Нова задача", payload["title"]
+  end
+
+  test "student cannot create assignment" do
+    school = create_school
+    teacher = create_teacher(school: school)
+    classroom = create_classroom(school: school, teacher: teacher)
+    subject = create_subject(school: school, teacher: teacher)
+    student = create_student(school: school, classroom: classroom)
+
+    post "/api/v1/assignments", params: {
+      classroom_id: classroom.id,
+      subject_id: subject.id,
+      title: "Нова задача"
+    }, headers: auth_headers_for(student, school: school)
+
+    assert_response :forbidden
+  end
+
+  test "teacher can update own assignment" do
+    school = create_school
+    teacher = create_teacher(school: school)
+    classroom = create_classroom(school: school, teacher: teacher)
+    subject = create_subject(school: school, teacher: teacher)
+    assignment = create_assignment(classroom: classroom, subject: subject, teacher: teacher, title: "Старо")
+
+    patch "/api/v1/assignments/#{assignment.id}", params: { title: "Ново" }, headers: auth_headers_for(teacher, school: school)
+
+    assert_response :success
+    assert_equal "Ново", assignment.reload.title
+  end
+
+  test "other teacher cannot update assignment" do
+    school = create_school
+    teacher = create_teacher(school: school)
+    other_teacher = create_teacher(school: school)
+    classroom = create_classroom(school: school, teacher: teacher)
+    subject = create_subject(school: school, teacher: teacher)
+    assignment = create_assignment(classroom: classroom, subject: subject, teacher: teacher)
+
+    patch "/api/v1/assignments/#{assignment.id}", params: { title: "Ново" }, headers: auth_headers_for(other_teacher, school: school)
+
+    assert_response :forbidden
+  end
+
+  test "teacher can add assignment step" do
+    school = create_school
+    teacher = create_teacher(school: school)
+    classroom = create_classroom(school: school, teacher: teacher)
+    subject = create_subject(school: school, teacher: teacher)
+    assignment = create_assignment(classroom: classroom, subject: subject, teacher: teacher)
+
+    post "/api/v1/assignments/#{assignment.id}/steps", params: { position: 1, title: "Чекор", content: "Содржина" }, headers: auth_headers_for(teacher, school: school)
+
+    assert_response :created
+    assert_equal 1, assignment.reload.assignment_steps.count
+  end
+
+  test "teacher can update assignment step" do
+    school = create_school
+    teacher = create_teacher(school: school)
+    classroom = create_classroom(school: school, teacher: teacher)
+    subject = create_subject(school: school, teacher: teacher)
+    assignment = create_assignment(classroom: classroom, subject: subject, teacher: teacher)
+    step = create_assignment_step(assignment: assignment, title: "Старо")
+
+    patch "/api/v1/assignments/#{assignment.id}/steps/#{step.id}", params: { title: "Ново" }, headers: auth_headers_for(teacher, school: school)
+
+    assert_response :success
+    assert_equal "Ново", step.reload.title
+  end
+
+  test "teacher can publish assignment" do
+    school = create_school
+    teacher = create_teacher(school: school)
+    classroom = create_classroom(school: school, teacher: teacher)
+    subject = create_subject(school: school, teacher: teacher)
+    student = create_student(school: school, classroom: classroom)
+    assignment = create_assignment(classroom: classroom, subject: subject, teacher: teacher, status: :draft, published_at: nil)
+
+    post "/api/v1/assignments/#{assignment.id}/publish", headers: auth_headers_for(teacher, school: school)
+
+    assert_response :success
+    assert_equal "published", assignment.reload.status
+    assert_equal 1, student.notifications.count
+  end
+
+  test "teacher can start submission for student" do
+    school = create_school
+    teacher = create_teacher(school: school)
+    classroom = create_classroom(school: school, teacher: teacher)
+    subject = create_subject(school: school, teacher: teacher)
+    student = create_student(school: school, classroom: classroom)
+    assignment = create_assignment(classroom: classroom, subject: subject, teacher: teacher)
+
+    post "/api/v1/assignments/#{assignment.id}/submissions", params: { student_id: student.id }, headers: auth_headers_for(teacher, school: school)
+
+    assert_response :created
+    assert_equal 1, Submission.count
+  end
+
+  test "teacher can update student submission feedback" do
+    school = create_school
+    teacher = create_teacher(school: school)
+    classroom = create_classroom(school: school, teacher: teacher)
+    subject = create_subject(school: school, teacher: teacher)
+    student = create_student(school: school, classroom: classroom)
+    assignment = create_assignment(classroom: classroom, subject: subject, teacher: teacher)
+    step = create_assignment_step(assignment: assignment)
+    submission = create_submission(assignment: assignment, student: student, status: :in_progress, submitted_at: nil)
+
+    patch "/api/v1/submissions/#{submission.id}", params: {
+      feedback: "Провери уште еднаш",
+      step_answers: [{ assignment_step_id: step.id, answer_text: "42" }]
+    }, headers: auth_headers_for(teacher, school: school)
+
+    assert_response :success
+    assert_equal "Провери уште еднаш", submission.reload.feedback
+  end
+
+  test "teacher cannot submit student submission" do
+    school = create_school
+    teacher = create_teacher(school: school)
+    classroom = create_classroom(school: school, teacher: teacher)
+    subject = create_subject(school: school, teacher: teacher)
+    student = create_student(school: school, classroom: classroom)
+    assignment = create_assignment(classroom: classroom, subject: subject, teacher: teacher)
+    submission = create_submission(assignment: assignment, student: student, status: :in_progress, submitted_at: nil)
+
+    post "/api/v1/submissions/#{submission.id}/submit", headers: auth_headers_for(teacher, school: school)
+
+    assert_response :forbidden
+  end
+
+  test "comments index returns assignment comments for student" do
+    school = create_school
+    teacher = create_teacher(school: school)
+    classroom = create_classroom(school: school, teacher: teacher)
+    subject = create_subject(school: school, teacher: teacher)
+    student = create_student(school: school, classroom: classroom)
+    assignment = create_assignment(classroom: classroom, subject: subject, teacher: teacher)
+    Comment.create!(author: teacher, commentable: assignment, body: "Коментар")
+
+    get "/api/v1/comments", params: { commentable_type: "Assignment", commentable_id: assignment.id }, headers: auth_headers_for(student, school: school)
+
+    assert_response :success
+    assert_equal 1, JSON.parse(response.body).length
+  end
+
+  test "student can create comment on submission" do
+    school = create_school
+    teacher = create_teacher(school: school)
+    classroom = create_classroom(school: school, teacher: teacher)
+    subject = create_subject(school: school, teacher: teacher)
+    student = create_student(school: school, classroom: classroom)
+    assignment = create_assignment(classroom: classroom, subject: subject, teacher: teacher)
+    submission = create_submission(assignment: assignment, student: student)
+
+    post "/api/v1/comments", params: { commentable_type: "Submission", commentable_id: submission.id, body: "Мој коментар" }, headers: auth_headers_for(student, school: school)
+
+    assert_response :created
+    assert_equal 1, submission.reload.comments.count
+  end
+
+  test "notifications mark as read updates read_at" do
+    school = create_school
+    student = create_student(school: school)
+    notification = Notification.create!(user: student, notification_type: "generic", title: "Наслов")
+
+    post "/api/v1/notifications/#{notification.id}/mark_as_read", headers: auth_headers_for(student, school: school)
+
+    assert_response :success
+    assert_not_nil notification.reload.read_at
+  end
+
+  test "calendar create event attaches participants" do
+    school = create_school
+    teacher = create_teacher(school: school)
+    student = create_student(school: school)
+
+    post "/api/v1/calendar/events", params: {
+      title: "Настан",
+      starts_at: 1.day.from_now,
+      participant_ids: [student.id]
+    }, headers: auth_headers_for(teacher, school: school)
+
+    assert_response :created
+    payload = JSON.parse(response.body)
+    assert_equal 1, payload["participants"].length
+  end
+
+  test "calendar update event changes title" do
+    school = create_school
+    teacher = create_teacher(school: school)
+    event = CalendarEvent.create!(school: school, title: "Стар настан", starts_at: 1.day.from_now)
+
+    patch "/api/v1/calendar/events/#{event.id}", params: { title: "Нов настан" }, headers: auth_headers_for(teacher, school: school)
+
+    assert_response :success
+    assert_equal "Нов настан", event.reload.title
+  end
+end

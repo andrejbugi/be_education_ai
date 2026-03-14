@@ -7,6 +7,7 @@ class Assignment < ApplicationRecord
   has_many :submissions, dependent: :destroy
   has_many :calendar_events, dependent: :nullify
   has_many :comments, as: :commentable, dependent: :destroy
+  has_many :ai_sessions, dependent: :nullify
 
   enum :status, {
     draft: 0,

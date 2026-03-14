@@ -22,6 +22,13 @@ class User < ApplicationRecord
   has_many :assignments, foreign_key: :teacher_id, inverse_of: :teacher
   has_many :submissions, foreign_key: :student_id, dependent: :destroy
   has_many :grades, foreign_key: :teacher_id
+  has_many :homeroom_assignments, foreign_key: :teacher_id, dependent: :destroy
+  has_many :homeroom_classrooms, through: :homeroom_assignments, source: :classroom
+  has_many :authored_announcements, foreign_key: :author_id, class_name: "Announcement", dependent: :destroy
+  has_many :attendance_records, foreign_key: :student_id, dependent: :destroy
+  has_many :recorded_attendance_records, foreign_key: :teacher_id, class_name: "AttendanceRecord", dependent: :destroy
+  has_many :student_performance_snapshots, foreign_key: :student_id, dependent: :destroy
+  has_many :ai_sessions, dependent: :destroy
 
   has_many :comments, foreign_key: :author_id, dependent: :destroy
   has_many :notifications, dependent: :destroy
