@@ -13,6 +13,7 @@ module Assignments
       Assignment.transaction do
         assignment.save!
         create_steps!(assignment)
+        create_resources!(assignment)
       end
 
       Result.new(success?: true, assignment: assignment, errors: [])
@@ -25,11 +26,15 @@ module Assignments
     attr_reader :teacher, :params
 
     def assignment_attributes
-      params.except(:steps)
+      params.except(:steps, :resources)
     end
 
     def step_params
       Array(params[:steps])
+    end
+
+    def resource_params
+      Array(params[:resources])
     end
 
     def create_steps!(assignment)
@@ -39,9 +44,30 @@ module Assignments
           position: step[:position].presence || (index + 1),
           title: step[:title],
           content: step[:content],
+          prompt: step[:prompt],
+          resource_url: step[:resource_url],
+          example_answer: step[:example_answer],
           step_type: step[:step_type].presence || "text",
           required: step.key?(:required) ? step[:required] : true,
-          metadata: step[:metadata] || {}
+          metadata: step[:metadata] || {},
+          content_json: step[:content_json] || []
+        )
+      end
+    end
+
+    def create_resources!(assignment)
+      resource_params.each_with_index do |resource, index|
+        resource = resource.with_indifferent_access
+        assignment.assignment_resources.create!(
+          title: resource[:title],
+          resource_type: resource[:resource_type],
+          file_url: resource[:file_url],
+          external_url: resource[:external_url],
+          embed_url: resource[:embed_url],
+          description: resource[:description],
+          position: resource[:position].presence || (index + 1),
+          is_required: resource[:is_required] || false,
+          metadata: resource[:metadata] || {}
         )
       end
     end

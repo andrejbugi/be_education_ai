@@ -6,13 +6,15 @@ module Api
         return render_not_found unless student
         return render_forbidden unless can_access_student?(student)
 
-        records = student.attendance_records.includes(:classroom, :teacher, :subject).order(attendance_date: :desc)
+        records = student.attendance_records.includes(:classroom, :teacher, :subject)
         records = records.where(school_id: current_school.id) if current_school
+        summary = records.group(:status).count.transform_keys(&:to_s)
+        records = records.order(attendance_date: :desc)
 
         render json: {
           student_id: student.id,
           student_name: student.full_name,
-          summary: records.group(:status).count.transform_keys(&:to_s),
+          summary: summary,
           records: records.limit(100).map do |record|
             {
               id: record.id,

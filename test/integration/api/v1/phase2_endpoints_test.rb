@@ -82,6 +82,25 @@ class Api::V1::Phase2EndpointsTest < ActionDispatch::IntegrationTest
     assert_response :forbidden
   end
 
+  test "student can load own attendance summary and records" do
+    school = create_school
+    teacher = create_teacher(school: school)
+    classroom = create_classroom(school: school, teacher: teacher)
+    subject = create_subject(school: school, teacher: teacher)
+    student = create_student(school: school, classroom: classroom)
+    AttendanceRecord.create!(school: school, classroom: classroom, subject: subject, student: student, teacher: teacher, attendance_date: Date.current, status: :present)
+    AttendanceRecord.create!(school: school, classroom: classroom, subject: subject, student: student, teacher: teacher, attendance_date: Date.current - 1.day, status: :late)
+
+    get "/api/v1/students/#{student.id}/attendance", headers: auth_headers_for(student, school: school)
+
+    assert_response :success
+    payload = JSON.parse(response.body)
+    assert_equal student.id, payload["student_id"]
+    assert_equal 1, payload["summary"]["present"]
+    assert_equal 1, payload["summary"]["late"]
+    assert_equal 2, payload["records"].length
+  end
+
   test "student performance endpoint returns snapshot payload" do
     school = create_school
     teacher = create_teacher(school: school)

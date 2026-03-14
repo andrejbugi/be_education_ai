@@ -80,11 +80,13 @@ def assign_teacher_to_subject(teacher:, subject:)
   TeacherSubject.find_or_create_by!(teacher: teacher, subject: subject)
 end
 
-def upsert_assignment(classroom:, subject:, teacher:, title:, description:, assignment_type:, status:, due_at:, published_at:, max_points:, settings:)
+def upsert_assignment(classroom:, subject:, teacher:, title:, description:, teacher_notes:, content_json:, assignment_type:, status:, due_at:, published_at:, max_points:, settings:)
   assignment = Assignment.find_or_initialize_by(classroom: classroom, title: title)
   assignment.subject = subject
   assignment.teacher = teacher
   assignment.description = description
+  assignment.teacher_notes = teacher_notes
+  assignment.content_json = content_json
   assignment.assignment_type = assignment_type
   assignment.status = status
   assignment.due_at = due_at
@@ -95,15 +97,33 @@ def upsert_assignment(classroom:, subject:, teacher:, title:, description:, assi
   assignment
 end
 
-def upsert_assignment_step(assignment:, position:, title:, content:, step_type:, required:, metadata:)
+def upsert_assignment_step(assignment:, position:, title:, content:, prompt:, resource_url:, example_answer:, content_json:, step_type:, required:, metadata:)
   step = AssignmentStep.find_or_initialize_by(assignment: assignment, position: position)
   step.title = title
   step.content = content
+  step.prompt = prompt
+  step.resource_url = resource_url
+  step.example_answer = example_answer
+  step.content_json = content_json
   step.step_type = step_type
   step.required = required
   step.metadata = metadata
   step.save!
   step
+end
+
+def upsert_assignment_resource(assignment:, title:, resource_type:, file_url: nil, external_url: nil, embed_url: nil, description:, position:, is_required:, metadata: {})
+  resource = AssignmentResource.find_or_initialize_by(assignment: assignment, position: position)
+  resource.title = title
+  resource.resource_type = resource_type
+  resource.file_url = file_url
+  resource.external_url = external_url
+  resource.embed_url = embed_url
+  resource.description = description
+  resource.is_required = is_required
+  resource.metadata = metadata
+  resource.save!
+  resource
 end
 
 def upsert_submission(assignment:, student:, status:, started_at:, submitted_at:, reviewed_at:, late:, total_score:, feedback:)
@@ -334,10 +354,20 @@ assignment_templates = [
     publish_days_ago: 4,
     max_points: 100,
     description: "Подгответе решенија и кратко образложение за секој чекор.",
+    teacher_notes: "Прво прегледајте ги материјалите, а потоа решавајте по редослед.",
+    content_json: [
+      { type: "heading", text: "Упатство за задачата" },
+      { type: "paragraph", text: "Прочитај ги материјалите и одговори со јасни реченици." },
+      { type: "instruction", text: "Користи пример од лекцијата кога објаснуваш." }
+    ],
+    resources: [
+      { title: "PDF упатство", resource_type: "pdf", file_url: "https://example.com/assignment-guide.pdf", description: "Главно упатство за задачата.", is_required: true },
+      { title: "Видео објаснување", resource_type: "video", external_url: "https://example.com/video", description: "Кратко видео со објаснување.", is_required: false }
+    ],
     steps: [
-      { title: "Прочитај лекција", content: "Прегледај ја лекцијата и издвој ги клучните поими.", step_type: "reading", required: true },
-      { title: "Реши задача", content: "Реши го главниот проблем и објасни го пристапот.", step_type: "text", required: true },
-      { title: "Кратка рефлексија", content: "Напиши што ти беше најтешко.", step_type: "text", required: false }
+      { title: "Прочитај лекција", content: "Прегледај ја лекцијата и издвој ги клучните поими.", prompt: "Издвои 3 клучни поими од лекцијата.", resource_url: "https://example.com/lesson", example_answer: "Пример: поим 1, поим 2, поим 3", content_json: [{ type: "text", text: "Запиши ги поимите со кратко објаснување." }], step_type: "reading", required: true },
+      { title: "Реши задача", content: "Реши го главниот проблем и објасни го пристапот.", prompt: "Опиши ги чекорите на решавање.", resource_url: "https://example.com/example-problem", example_answer: "Прво го читам условот, потоа ги запишувам податоците...", content_json: [{ type: "instruction", text: "Покажи ја логиката, не само конечниот одговор." }], step_type: "text", required: true },
+      { title: "Кратка рефлексија", content: "Напиши што ти беше најтешко.", prompt: "Напиши 2-3 реченици за искуството.", resource_url: nil, example_answer: "Најтешко ми беше да го организирам одговорот.", content_json: [{ type: "quote", text: "Што научив од оваа задача?" }], step_type: "text", required: false }
     ]
   },
   {
@@ -348,10 +378,18 @@ assignment_templates = [
     publish_days_ago: nil,
     max_points: 100,
     description: "Подгответе мини проект со истражување и презентација.",
+    teacher_notes: "Фокусирајте се на структура и квалитет на извори.",
+    content_json: [
+      { type: "heading", text: "Проектна активност" },
+      { type: "paragraph", text: "Изработете краток проект со јасна структура и заклучок." }
+    ],
+    resources: [
+      { title: "Шаблон за презентација", resource_type: "file", file_url: "https://example.com/template.pptx", description: "Шаблон што може да се користи.", is_required: false }
+    ],
     steps: [
-      { title: "Истражување", content: "Собери најмалку три извори.", step_type: "research", required: true },
-      { title: "Презентација", content: "Подготви структура за презентирање.", step_type: "upload", required: true },
-      { title: "Самоевалуација", content: "Оцени го сопствениот напредок.", step_type: "text", required: true }
+      { title: "Истражување", content: "Собери најмалку три извори.", prompt: "Наведи ги изворите и зошто ги избра.", resource_url: "https://example.com/research-guide", example_answer: nil, content_json: [{ type: "list", items: ["Извор 1", "Извор 2", "Извор 3"] }], step_type: "research", required: true },
+      { title: "Презентација", content: "Подготви структура за презентирање.", prompt: "Направи вовед, главен дел и заклучок.", resource_url: "https://example.com/presentation-guide", example_answer: "Слајд 1: тема, Слајд 2: главни идеи...", content_json: [{ type: "instruction", text: "Користи најмногу 6 слајдови." }], step_type: "upload", required: true },
+      { title: "Самоевалуација", content: "Оцени го сопствениот напредок.", prompt: "Што би подобрил следниот пат?", resource_url: nil, example_answer: nil, content_json: [{ type: "text", text: "Кратка саморефлексија." }], step_type: "text", required: true }
     ]
   },
   {
@@ -362,9 +400,16 @@ assignment_templates = [
     publish_days_ago: nil,
     max_points: 50,
     description: "Внатрешен квиз за повторување на материјалот.",
+    teacher_notes: "Овој квиз е за вежбање и повторување.",
+    content_json: [
+      { type: "warning", text: "Одговори без помош од белешки." }
+    ],
+    resources: [
+      { title: "Линк до белешки", resource_type: "link", external_url: "https://example.com/notes", description: "Материјал за повторување.", is_required: false }
+    ],
     steps: [
-      { title: "Прашања со избор", content: "Одговори на прашањата со избор.", step_type: "quiz", required: true },
-      { title: "Краток одговор", content: "Објасни еден поим со свои зборови.", step_type: "text", required: true }
+      { title: "Прашања со избор", content: "Одговори на прашањата со избор.", prompt: "Избери го точниот одговор и објасни го.", resource_url: nil, example_answer: nil, content_json: [{ type: "text", text: "Прочитај внимателно пред да одговориш." }], step_type: "quiz", required: true },
+      { title: "Краток одговор", content: "Објасни еден поим со свои зборови.", prompt: "Напиши кратко но прецизно објаснување.", resource_url: nil, example_answer: "Поимот значи...", content_json: [{ type: "hint", text: "Користи сопствени зборови." }], step_type: "text", required: true }
     ]
   }
 ]
@@ -531,6 +576,8 @@ SCHOOL_BLUEPRINTS.each do |blueprint|
           teacher: teacher,
           title: "#{subject.name} - #{classroom.name} #{template[:suffix]}",
           description: template[:description],
+          teacher_notes: template[:teacher_notes],
+          content_json: template[:content_json],
           assignment_type: template[:assignment_type],
           status: template[:status],
           due_at: due_at,
@@ -545,9 +592,28 @@ SCHOOL_BLUEPRINTS.each do |blueprint|
             position: step_index + 1,
             title: step_template[:title],
             content: step_template[:content],
+            prompt: step_template[:prompt],
+            resource_url: step_template[:resource_url],
+            example_answer: step_template[:example_answer],
+            content_json: step_template[:content_json],
             step_type: step_template[:step_type],
             required: step_template[:required],
             metadata: { estimated_minutes: 10 + (step_index * 5) }
+          )
+        end
+
+        template[:resources].each_with_index do |resource_template, resource_index|
+          upsert_assignment_resource(
+            assignment: assignment,
+            title: resource_template[:title],
+            resource_type: resource_template[:resource_type],
+            file_url: resource_template[:file_url],
+            external_url: resource_template[:external_url],
+            embed_url: resource_template[:embed_url],
+            description: resource_template[:description],
+            position: resource_index + 1,
+            is_required: resource_template[:is_required],
+            metadata: { seeded: true }
           )
         end
 

@@ -137,29 +137,49 @@ module ApiTestFactory
     subject
   end
 
-  def create_assignment(classroom:, subject:, teacher:, title: nil, status: :published, due_at: 2.days.from_now, published_at: Time.current)
+  def create_assignment(classroom:, subject:, teacher:, title: nil, status: :published, due_at: 2.days.from_now, published_at: Time.current, teacher_notes: "Teacher notes", content_json: nil)
     Assignment.create!(
       classroom: classroom,
       subject: subject,
       teacher: teacher,
       title: title || unique_value("Задача"),
       description: "Опис",
+      teacher_notes: teacher_notes,
       assignment_type: "homework",
       status: status,
       due_at: due_at,
       published_at: published_at,
-      max_points: 100
+      max_points: 100,
+      content_json: content_json || [{ type: "instruction", text: "Прочитај ги упатствата внимателно." }]
     )
   end
 
-  def create_assignment_step(assignment:, position: 1, title: nil)
+  def create_assignment_step(assignment:, position: 1, title: nil, prompt: "Одговори на прашањето", resource_url: nil, example_answer: nil, content_json: nil)
     AssignmentStep.create!(
       assignment: assignment,
       position: position,
       title: title || "Чекор #{position}",
       content: "Содржина",
+      prompt: prompt,
+      resource_url: resource_url,
+      example_answer: example_answer,
       step_type: "text",
-      required: true
+      required: true,
+      content_json: content_json || [{ type: "text", text: "Дополнително објаснување за чекорот." }]
+    )
+  end
+
+  def create_assignment_resource(assignment:, title: "Ресурс", resource_type: "link", position: 1, file_url: nil, external_url: "https://example.com", embed_url: nil, description: "Опис на ресурс", is_required: false)
+    AssignmentResource.create!(
+      assignment: assignment,
+      title: title,
+      resource_type: resource_type,
+      position: position,
+      file_url: file_url,
+      external_url: external_url,
+      embed_url: embed_url,
+      description: description,
+      is_required: is_required
     )
   end
 

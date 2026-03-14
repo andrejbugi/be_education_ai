@@ -4,6 +4,7 @@ class Assignment < ApplicationRecord
   belongs_to :teacher, class_name: "User"
 
   has_many :assignment_steps, -> { order(:position) }, dependent: :destroy
+  has_many :assignment_resources, -> { order(:position) }, dependent: :destroy
   has_many :submissions, dependent: :destroy
   has_many :calendar_events, dependent: :nullify
   has_many :comments, as: :commentable, dependent: :destroy

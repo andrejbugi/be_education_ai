@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_03_14_100007) do
+ActiveRecord::Schema[8.0].define(version: 2026_03_14_110002) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -89,6 +89,24 @@ ActiveRecord::Schema[8.0].define(version: 2026_03_14_100007) do
     t.index ["subject_id"], name: "index_announcements_on_subject_id"
   end
 
+  create_table "assignment_resources", force: :cascade do |t|
+    t.bigint "assignment_id", null: false
+    t.string "title", null: false
+    t.string "resource_type", null: false
+    t.string "file_url"
+    t.string "external_url"
+    t.string "embed_url"
+    t.text "description"
+    t.integer "position", default: 1, null: false
+    t.boolean "is_required", default: false, null: false
+    t.jsonb "metadata", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["assignment_id", "position"], name: "index_assignment_resources_on_assignment_id_and_position", unique: true
+    t.index ["assignment_id"], name: "index_assignment_resources_on_assignment_id"
+    t.index ["resource_type"], name: "index_assignment_resources_on_resource_type"
+  end
+
   create_table "assignment_steps", force: :cascade do |t|
     t.bigint "assignment_id", null: false
     t.integer "position", null: false
@@ -99,6 +117,10 @@ ActiveRecord::Schema[8.0].define(version: 2026_03_14_100007) do
     t.jsonb "metadata", default: {}, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.text "prompt"
+    t.string "resource_url"
+    t.text "example_answer"
+    t.jsonb "content_json", default: [], null: false
     t.index ["assignment_id", "position"], name: "index_assignment_steps_on_assignment_id_and_position", unique: true
     t.index ["assignment_id"], name: "index_assignment_steps_on_assignment_id"
   end
@@ -117,6 +139,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_03_14_100007) do
     t.jsonb "settings", default: {}, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.text "teacher_notes"
+    t.jsonb "content_json", default: [], null: false
     t.index ["classroom_id", "subject_id", "due_at"], name: "index_assignments_on_classroom_id_and_subject_id_and_due_at"
     t.index ["classroom_id"], name: "index_assignments_on_classroom_id"
     t.index ["subject_id"], name: "index_assignments_on_subject_id"
@@ -424,6 +448,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_03_14_100007) do
   add_foreign_key "announcements", "schools"
   add_foreign_key "announcements", "subjects"
   add_foreign_key "announcements", "users", column: "author_id"
+  add_foreign_key "assignment_resources", "assignments"
   add_foreign_key "assignment_steps", "assignments"
   add_foreign_key "assignments", "classrooms"
   add_foreign_key "assignments", "subjects"

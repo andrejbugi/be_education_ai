@@ -133,8 +133,25 @@ class Api::V1::DashboardAndViewsTest < ActionDispatch::IntegrationTest
     classroom = create_classroom(school: school, teacher: teacher)
     subject = create_subject(school: school, teacher: teacher)
     student = create_student(school: school, classroom: classroom)
-    assignment = create_assignment(classroom: classroom, subject: subject, teacher: teacher)
-    create_assignment_step(assignment: assignment)
+    assignment = create_assignment(
+      classroom: classroom,
+      subject: subject,
+      teacher: teacher,
+      teacher_notes: "Прочитај го ресурсот пред решавање.",
+      content_json: [{ type: "paragraph", text: "Ова е богата содржина." }]
+    )
+    create_assignment_step(
+      assignment: assignment,
+      prompt: "Реши и образложи.",
+      resource_url: "https://example.com/resource",
+      example_answer: "Пример"
+    )
+    create_assignment_resource(
+      assignment: assignment,
+      title: "PDF материјал",
+      resource_type: "pdf",
+      file_url: "https://example.com/material.pdf"
+    )
     submission = create_submission(assignment: assignment, student: student, status: :submitted)
 
     get "/api/v1/student/assignments/#{assignment.id}", headers: auth_headers_for(student, school: school)
@@ -142,6 +159,9 @@ class Api::V1::DashboardAndViewsTest < ActionDispatch::IntegrationTest
     assert_response :success
     payload = JSON.parse(response.body)
     assert_equal 1, payload["steps"].length
+    assert_equal 1, payload["resources"].length
+    assert_equal "Прочитај го ресурсот пред решавање.", payload["teacher_notes"]
+    assert_equal "Реши и образложи.", payload["steps"].first["prompt"]
     assert_equal submission.id, payload["submission"]["id"]
   end
 end

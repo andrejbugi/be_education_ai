@@ -19,7 +19,7 @@ module Api
         end
 
         def show
-          assignment = Assignment.includes(:assignment_steps, :subject, :teacher, :classroom)
+          assignment = Assignment.includes(:assignment_steps, :assignment_resources, :subject, :teacher, :classroom)
                                  .find_by(id: params[:id])
           return render_not_found unless assignment
 
@@ -43,6 +43,8 @@ module Api
             id: assignment.id,
             title: assignment.title,
             description: assignment.description,
+            teacher_notes: assignment.teacher_notes,
+            content_json: assignment.content_json,
             status: assignment.status,
             due_at: assignment.due_at,
             subject: {
@@ -61,7 +63,10 @@ module Api
 
           if include_steps
             payload[:steps] = assignment.assignment_steps.map do |step|
-              step.as_json(only: %i[id position title content step_type required metadata])
+              step.as_json(only: %i[id position title content prompt resource_url example_answer step_type required metadata content_json])
+            end
+            payload[:resources] = assignment.assignment_resources.map do |resource|
+              resource.as_json(only: %i[id title resource_type file_url external_url embed_url description position is_required metadata])
             end
           end
 

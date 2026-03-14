@@ -12,15 +12,32 @@ class Api::V1::LearningWorkflowEndpointsTest < ActionDispatch::IntegrationTest
       subject_id: subject.id,
       title: "Нова задача",
       description: "Опис",
+      teacher_notes: "Прочитај материјали пред да почнеш.",
       assignment_type: "homework",
       due_at: 2.days.from_now,
       max_points: 100,
-      steps: [{ position: 1, title: "Чекор 1", content: "Реши" }]
+      content_json: [
+        { type: "heading", text: "Главна задача" },
+        { type: "paragraph", text: "Следи ги упатствата по ред." }
+      ],
+      resources: [
+        { title: "PDF упатство", resource_type: "pdf", file_url: "https://example.com/task.pdf", description: "Главен документ", is_required: true }
+      ],
+      steps: [{
+        position: 1,
+        title: "Чекор 1",
+        content: "Реши",
+        prompt: "Објасни како дојде до одговорот.",
+        resource_url: "https://example.com/step-help",
+        example_answer: "Прво ги издвојувам податоците...",
+        content_json: [{ type: "instruction", text: "Пиши целосни реченици." }]
+      }]
     }, headers: auth_headers_for(teacher, school: school)
 
     assert_response :created
     payload = JSON.parse(response.body)
     assert_equal "Нова задача", payload["title"]
+    assert_equal "Прочитај материјали пред да почнеш.", payload["teacher_notes"]
   end
 
   test "student cannot create assignment" do
@@ -105,6 +122,41 @@ class Api::V1::LearningWorkflowEndpointsTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_equal "published", assignment.reload.status
     assert_equal 1, student.notifications.count
+  end
+
+  test "teacher assignment show includes resources and rich step fields" do
+    school = create_school
+    teacher = create_teacher(school: school)
+    classroom = create_classroom(school: school, teacher: teacher)
+    subject = create_subject(school: school, teacher: teacher)
+    assignment = create_assignment(
+      classroom: classroom,
+      subject: subject,
+      teacher: teacher,
+      teacher_notes: "Забелешки за наставник",
+      content_json: [{ type: "heading", text: "Наслов" }]
+    )
+    create_assignment_step(
+      assignment: assignment,
+      prompt: "Одговори со свои зборови.",
+      resource_url: "https://example.com/step-resource",
+      example_answer: "Пример одговор"
+    )
+    create_assignment_resource(
+      assignment: assignment,
+      title: "Работен лист",
+      resource_type: "file",
+      file_url: "https://example.com/worksheet.docx"
+    )
+
+    get "/api/v1/assignments/#{assignment.id}", headers: auth_headers_for(teacher, school: school)
+
+    assert_response :success
+    payload = JSON.parse(response.body)
+    assert_equal "Забелешки за наставник", payload["teacher_notes"]
+    assert_equal 1, payload["resources"].length
+    assert_equal "Одговори со свои зборови.", payload["steps"].first["prompt"]
+    assert_equal "Пример одговор", payload["steps"].first["example_answer"]
   end
 
   test "teacher can start submission for student" do
