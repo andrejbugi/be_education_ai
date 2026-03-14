@@ -24,15 +24,19 @@ module Api
 
         result = AiMessages::Append.new(ai_session: @ai_session, params: ai_message_params.to_h.symbolize_keys).call
         if result.success?
-          log_activity(action: "ai_message_appended", trackable: @ai_session, metadata: { ai_session_id: @ai_session.id, ai_message_id: result.message.id })
+          assistant_result = generate_tutor_response_for(result.message)
+          log_activity(
+            action: "ai_message_appended",
+            trackable: @ai_session,
+            metadata: {
+              ai_session_id: @ai_session.id,
+              ai_message_id: result.message.id,
+              assistant_message_id: assistant_result&.message&.id
+            }.compact
+          )
           render json: {
-            id: result.message.id,
-            role: result.message.role,
-            message_type: result.message.message_type,
-            content: result.message.content,
-            sequence_number: result.message.sequence_number,
-            metadata: result.message.metadata,
-            created_at: result.message.created_at
+            user_message: serialize_message(result.message),
+            assistant_message: assistant_result&.message ? serialize_message(assistant_result.message) : nil
           }, status: :created
         else
           render json: { errors: result.errors }, status: :unprocessable_entity
@@ -52,6 +56,27 @@ module Api
 
       def ai_message_params
         params.permit(:role, :message_type, :content, metadata: {})
+      end
+
+      def generate_tutor_response_for(message)
+        return unless message.user? && message.question?
+
+        result = AiTutor::GenerateResponse.new(ai_session: @ai_session, user_message: message).call
+        return result if result.success?
+
+        nil
+      end
+
+      def serialize_message(message)
+        {
+          id: message.id,
+          role: message.role,
+          message_type: message.message_type,
+          content: message.content,
+          sequence_number: message.sequence_number,
+          metadata: message.metadata,
+          created_at: message.created_at
+        }
       end
     end
   end

@@ -43,7 +43,9 @@ module Api
       private
 
       def login_params
-        params.permit(:email, :password, :school_id)
+        wrapped_params = params[:auth]
+        auth_params = wrapped_params.is_a?(ActionController::Parameters) ? wrapped_params : params
+        auth_params.permit(:email, :password, :school_id)
       end
 
       def resolve_school_for(user)

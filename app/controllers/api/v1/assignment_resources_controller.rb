@@ -9,7 +9,7 @@ module Api
       before_action :set_resource, only: %i[update destroy]
 
       def create
-        resource = @assignment.assignment_resources.new(resource_params.except(:file, :remove_file))
+        resource = @assignment.assignment_resources.new(resource_params.except(:assignment_id, :file, :remove_file))
         attach_uploaded_file(resource, resource_params[:file])
         set_next_position(resource) if resource.position.blank?
 
@@ -21,7 +21,7 @@ module Api
       end
 
       def update
-        @resource.assign_attributes(resource_params.except(:file, :remove_file))
+        @resource.assign_attributes(resource_params.except(:assignment_id, :file, :remove_file))
         remove_uploaded_file(@resource) if remove_file?
         attach_uploaded_file(@resource, resource_params[:file])
 
@@ -60,7 +60,7 @@ module Api
       end
 
       def resource_params
-        params.permit(:title, :resource_type, :file_url, :external_url, :embed_url, :description, :position, :is_required, :file, :remove_file, metadata: {})
+        params.permit(:assignment_id, :title, :resource_type, :file_url, :external_url, :embed_url, :description, :position, :is_required, :file, :remove_file, metadata: {})
       end
 
       def remove_file?
