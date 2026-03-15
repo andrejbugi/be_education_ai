@@ -33,7 +33,7 @@ Returned on assignment details endpoints:
 - `classroom`
 - `resources`
 - `steps`
-- `submission` for student view
+- `submission` for student view, including saved `step_answers` when a submission exists
 
 ## `resources`
 Assignment-level materials for the whole task.
@@ -103,6 +103,7 @@ Teacher/admin assignment detail responses also include:
 - `answer_keys`
 
 Student assignment detail responses do not include `answer_keys`.
+Student assignment detail responses now include `submission.step_answers` so FE can repopulate previously saved answers.
 
 Supported `evaluation_mode` values:
 - `manual`
@@ -148,6 +149,30 @@ Teacher step example with answer keys:
       "metadata": {}
     }
   ]
+}
+```
+
+Student submission excerpt inside `GET /api/v1/student/assignments/:id`:
+```json
+{
+  "submission": {
+    "id": 44,
+    "status": "in_progress",
+    "started_at": "2026-03-15T01:00:00.000Z",
+    "submitted_at": null,
+    "total_score": null,
+    "late": false,
+    "step_answers": [
+      {
+        "id": 101,
+        "assignment_step_id": 18,
+        "answer_text": "x = 5",
+        "answer_data": {},
+        "status": "correct",
+        "answered_at": "2026-03-15T01:05:00.000Z"
+      }
+    ]
+  }
 }
 ```
 

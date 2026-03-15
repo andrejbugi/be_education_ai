@@ -28,10 +28,10 @@ module Api
 
           return render_forbidden unless assignment.classroom.students.exists?(id: current_user.id)
 
-          submission = Submission.find_by(assignment: assignment, student: current_user)
+          submission = Submission.includes(:submission_step_answers).find_by(assignment: assignment, student: current_user)
 
           render json: serialize_assignment(assignment, include_steps: true).merge(
-            submission: submission&.as_json(only: %i[id status started_at submitted_at total_score late])
+            submission: serialize_submission(submission)
           )
         end
 
@@ -70,6 +70,29 @@ module Api
           end
 
           payload
+        end
+
+        def serialize_submission(submission)
+          return nil unless submission
+
+          {
+            id: submission.id,
+            status: submission.status,
+            started_at: submission.started_at,
+            submitted_at: submission.submitted_at,
+            total_score: submission.total_score,
+            late: submission.late,
+            step_answers: submission.submission_step_answers.order(:assignment_step_id).map do |step_answer|
+              {
+                id: step_answer.id,
+                assignment_step_id: step_answer.assignment_step_id,
+                answer_text: step_answer.answer_text,
+                answer_data: step_answer.answer_data,
+                status: step_answer.status,
+                answered_at: step_answer.answered_at
+              }
+            end
+          }
         end
       end
     end

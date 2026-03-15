@@ -156,6 +156,14 @@ class Api::V1::DashboardAndViewsTest < ActionDispatch::IntegrationTest
       resource.file.attach(uploaded_test_file(filename: "material.txt", content: "Локален материјал"))
     end
     submission = create_submission(assignment: assignment, student: student, status: :submitted)
+    SubmissionStepAnswer.create!(
+      submission: submission,
+      assignment_step: assignment.assignment_steps.first,
+      answer_text: "x = 5",
+      answer_data: {},
+      status: :correct,
+      answered_at: Time.current
+    )
 
     get "/api/v1/student/assignments/#{assignment.id}", headers: auth_headers_for(student, school: school)
 
@@ -166,6 +174,9 @@ class Api::V1::DashboardAndViewsTest < ActionDispatch::IntegrationTest
     assert_equal "Прочитај го ресурсот пред решавање.", payload["teacher_notes"]
     assert_equal "Реши и образложи.", payload["steps"].first["prompt"]
     assert_equal submission.id, payload["submission"]["id"]
+    assert_equal 1, payload["submission"]["step_answers"].length
+    assert_equal "x = 5", payload["submission"]["step_answers"].first["answer_text"]
+    assert_equal "correct", payload["submission"]["step_answers"].first["status"]
     assert_equal "normalized_text", payload["steps"].first["evaluation_mode"]
     assert_nil payload["steps"].first["answer_keys"]
     assert_equal "material.txt", payload["resources"].first.dig("uploaded_file", "filename")

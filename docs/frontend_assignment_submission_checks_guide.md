@@ -86,6 +86,7 @@ Step example:
 
 ## 4. Student assignment responses
 Student assignment detail responses do not include `answer_keys`.
+Student assignment detail responses do include the student's own `submission.step_answers` when a submission already exists.
 
 Endpoint:
 - `GET /student/assignments/:id`
@@ -103,11 +104,29 @@ Student-safe step example:
 
 This is intentional so FE never exposes the correct answers to students.
 
+Student assignment detail excerpt:
+```json
+{
+  "submission": {
+    "id": 44,
+    "status": "in_progress",
+    "step_answers": [
+      {
+        "assignment_step_id": 21,
+        "answer_text": "x = 5",
+        "status": "correct"
+      }
+    ]
+  }
+}
+```
+
 ## 5. Submission save flow
 1. `POST /assignments/:assignment_id/submissions`
 2. `PATCH /submissions/:id` with one or more `step_answers`
 3. read returned `step_answers[*].status`
-4. `POST /submissions/:id/submit` when done
+4. on reopen, use `GET /student/assignments/:id` and read `submission.step_answers`
+5. `POST /submissions/:id/submit` when done
 
 Example save payload:
 ```json

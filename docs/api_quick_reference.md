@@ -42,6 +42,7 @@ Base path: `/api/v1`
 - steps support `evaluation_mode`: `manual | normalized_text | numeric | regex`
 - teacher/admin assignment step payloads can include `answer_keys`
 - student assignment payloads do not include `answer_keys`
+- `GET /student/assignments/:id` includes `submission.step_answers` when the student has already started work
 - submission step answers may return `answered`, `correct`, or `incorrect`
 
 ## Comments
