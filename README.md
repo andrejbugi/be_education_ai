@@ -27,7 +27,7 @@ Health check:
 
 ## Frontend Login Flow
 Detailed guide with request/response examples:
-[docs/frontend_login_flow.md](/home/andrejbugi/projects/be_education_ai/docs/frontend_login_flow.md)
+[docs/login_docs.md](/home/andrejbugi/projects/be_education_ai/docs/login/login_docs.md)
 
 ## Backend Docs
 - [backend_overview.md](/home/andrejbugi/projects/be_education_ai/docs/backend_overview.md)
