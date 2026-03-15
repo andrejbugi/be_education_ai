@@ -6,7 +6,9 @@ module Api
       def index
         return render_forbidden unless owns_session?(@ai_session)
 
-        render json: @ai_session.ai_messages.map do |message|
+        limit, offset = pagination_params
+
+        render json: @ai_session.ai_messages.limit(limit).offset(offset).map do |message|
           {
             id: message.id,
             role: message.role,

@@ -4,7 +4,8 @@ module Api
       skip_before_action :authenticate_user!, only: :index
 
       def index
-        schools = School.where(active: true).order(:name)
+        limit, offset = pagination_params
+        schools = School.where(active: true).order(:name).limit(limit).offset(offset)
         render json: schools.as_json(only: %i[id name code city active])
       end
 

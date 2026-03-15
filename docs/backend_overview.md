@@ -29,6 +29,9 @@
 - Backend resolves school from `X-School-Id` (or `school_id` param in some endpoints).
 - Access is restricted to schools where the current user is a member.
 
+## Pagination
+- List endpoints generally use shared `limit` / `offset` pagination.
+
 ## Role checks
 - `student` endpoints for student dashboard and student assignment views.
 - `teacher` endpoints for teacher dashboard and grading/assignment management.

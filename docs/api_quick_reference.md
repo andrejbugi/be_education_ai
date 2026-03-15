@@ -2,6 +2,15 @@
 
 Base path: `/api/v1`
 
+## Pagination
+- list/index endpoints use `limit` and `offset`
+- default `limit` is `25`
+- maximum `limit` is `100`
+- `offset` is zero-based
+- example first page: `?limit=25&offset=0`
+- example second page: `?limit=25&offset=25`
+- if `limit` is too large, backend clamps it down to `100`
+
 ## Auth
 - `POST /auth/login`
 - `DELETE /auth/logout`

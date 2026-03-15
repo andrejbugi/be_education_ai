@@ -11,8 +11,9 @@ module Api
 
         snapshots = student.student_performance_snapshots.order(period_start: :desc)
         snapshots = snapshots.where(school_id: current_school.id) if current_school
+        limit, offset = pagination_params
 
-        render json: snapshots.limit(20).map do |snapshot|
+        render json: snapshots.limit(limit).offset(offset).map do |snapshot|
           {
             id: snapshot.id,
             period_type: snapshot.period_type,

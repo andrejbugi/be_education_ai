@@ -15,7 +15,8 @@ module Api
         return render_not_found unless commentable
         return render_forbidden unless can_access_commentable?(commentable)
 
-        comments = commentable.comments.includes(:author).order(created_at: :asc)
+        limit, offset = pagination_params
+        comments = commentable.comments.includes(:author).order(created_at: :asc).limit(limit).offset(offset)
         render json: comments.map { |comment| serialize_comment(comment) }
       end
 

@@ -13,8 +13,9 @@ module Api
                      end
           school = current_school
           subjects = subjects.where(school: school) if school
+          limit, offset = pagination_params
 
-          render json: subjects.order(:name).as_json(
+          render json: subjects.order(:name).limit(limit).offset(offset).as_json(
             only: %i[id name code school_id],
             include: {
               school: { only: %i[id name] }

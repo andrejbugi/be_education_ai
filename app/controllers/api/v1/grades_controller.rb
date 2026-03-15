@@ -26,7 +26,26 @@ module Api
       end
 
       def grade_params
-        params.permit(:score, :max_score, :feedback)
+        ActionController::Parameters.new(grade_request_params.to_unsafe_h.slice(
+          "score",
+          "max_score",
+          "feedback"
+        )).permit(:score, :max_score, :feedback)
+      end
+
+      def grade_request_params
+        wrapped_params = request_body_params[:grade]
+        if wrapped_params.is_a?(ActionController::Parameters) && wrapped_params.present?
+          ActionController::Parameters.new(
+            request_body_params.to_unsafe_h.except("grade").merge(wrapped_params.to_unsafe_h)
+          )
+        else
+          request_body_params
+        end
+      end
+
+      def request_body_params
+        @request_body_params ||= ActionController::Parameters.new(request.request_parameters)
       end
     end
   end

@@ -6,7 +6,8 @@ module Api
           require_role!("teacher", "admin")
           return if performed?
 
-          classrooms = base_scope.order(:name)
+          limit, offset = pagination_params
+          classrooms = base_scope.order(:name).limit(limit).offset(offset)
           render json: classrooms.map { |classroom| classroom_payload(classroom) }
         end
 
