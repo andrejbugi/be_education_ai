@@ -22,7 +22,12 @@ module Api
       def create
         return render_forbidden unless owns_session?(@ai_session)
 
-        result = AiMessages::Append.new(ai_session: @ai_session, params: ai_message_params.to_h.symbolize_keys).call
+        message_params = enriched_ai_message_params
+        if limit_reached_for?(message_params)
+          return render json: question_limit_payload(message_params[:metadata]["assignment_step_id"]), status: :too_many_requests
+        end
+
+        result = AiMessages::Append.new(ai_session: @ai_session, params: message_params).call
         if result.success?
           assistant_result = generate_tutor_response_for(result.message)
           log_activity(
@@ -58,6 +63,37 @@ module Api
         params.permit(:role, :message_type, :content, metadata: {})
       end
 
+      def enriched_ai_message_params
+        permitted = ai_message_params.to_h.deep_symbolize_keys
+        return permitted unless permitted[:role].to_s == "user" && permitted[:message_type].to_s == "question"
+
+        assignment_step = resolved_assignment_step_for(permitted)
+        return permitted unless assignment_step
+
+        metadata = (permitted[:metadata] || {}).deep_stringify_keys
+        metadata["assignment_step_id"] ||= assignment_step.id
+        permitted.merge(metadata: metadata)
+      end
+
+      def limit_reached_for?(message_params)
+        return false unless current_user.has_role?("student")
+        return false unless message_params[:role].to_s == "user" && message_params[:message_type].to_s == "question"
+
+        assignment_step = resolved_assignment_step_for(message_params)
+        return false unless assignment_step
+
+        !AiTutor::QuestionLimit.new(ai_session: @ai_session, assignment_step: assignment_step).allowed?
+      end
+
+      def question_limit_payload(assignment_step_id)
+        {
+          error: "AI question limit reached for this step",
+          code: "step_question_limit_reached",
+          assignment_step_id: assignment_step_id.to_i,
+          limit: AiTutor::QuestionLimit::MAX_QUESTIONS_PER_STEP
+        }
+      end
+
       def generate_tutor_response_for(message)
         return unless message.user? && message.question?
 
@@ -77,6 +113,16 @@ module Api
           metadata: message.metadata,
           created_at: message.created_at
         }
+      end
+
+      def resolved_assignment_step_for(message_params)
+        metadata = message_params[:metadata] || {}
+        requested_assignment_step_id = metadata[:assignment_step_id] || metadata["assignment_step_id"]
+
+        AiTutor::ResolveAssignmentStep.new(
+          ai_session: @ai_session,
+          requested_assignment_step_id: requested_assignment_step_id
+        ).call
       end
     end
   end

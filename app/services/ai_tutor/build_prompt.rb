@@ -79,21 +79,10 @@ module AiTutor
     end
 
     def resolve_assignment_step(assignment, submission)
-      return unless assignment
-
-      steps = assignment.assignment_steps.includes(:assignment_step_answer_keys).order(:position).to_a
-      return if steps.empty?
-
-      requested_step = steps.find { |step| step.id == requested_assignment_step_id }
-      return requested_step if requested_step
-
-      return steps.first unless submission
-
-      step_answers = submission.submission_step_answers.index_by(&:assignment_step_id)
-      steps.find do |step|
-        answer = step_answers[step.id]
-        answer.nil? || !answer.correct?
-      end || steps.first
+      AiTutor::ResolveAssignmentStep.new(
+        ai_session: ai_session,
+        requested_assignment_step_id: requested_assignment_step_id
+      ).call
     end
 
     def resolve_submission_step_answer(submission, assignment_step)

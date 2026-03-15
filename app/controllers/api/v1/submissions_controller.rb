@@ -107,7 +107,14 @@ module Api
       end
 
       def submission_params
-        params.permit(
+        ActionController::Parameters.new(submission_request_params.to_unsafe_h.slice(
+          "feedback",
+          "assignment_step_id",
+          "answer_text",
+          "status",
+          "answer_data",
+          "step_answers"
+        )).permit(
           :feedback,
           :assignment_step_id,
           :answer_text,
@@ -115,6 +122,21 @@ module Api
           answer_data: {},
           step_answers: [:assignment_step_id, :answer_text, :status, { answer_data: {} }]
         )
+      end
+
+      def submission_request_params
+        wrapped_params = request_body_params[:submission]
+        if wrapped_params.is_a?(ActionController::Parameters) && wrapped_params.present?
+          ActionController::Parameters.new(
+            request_body_params.to_unsafe_h.except("submission").merge(wrapped_params.to_unsafe_h)
+          )
+        else
+          request_body_params
+        end
+      end
+
+      def request_body_params
+        @request_body_params ||= ActionController::Parameters.new(request.request_parameters)
       end
 
       def serialize_submission(submission)

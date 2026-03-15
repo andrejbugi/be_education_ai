@@ -11,7 +11,7 @@ module Api
         return render_forbidden unless can_manage_assignment?
 
         step = @assignment.assignment_steps.new(step_params)
-        step.content_json = normalized_content_json if step_request_params.key?(:content_json)
+        step.content_json = normalized_content_json if step_request_param_key?(:content_json)
         if save_step_with_answer_keys(step)
           render json: serialize_step(step), status: :created
         else
@@ -28,7 +28,7 @@ module Api
         return render_not_found unless step
 
         attributes = step_params.to_h
-        attributes[:content_json] = normalized_content_json if step_request_params.key?(:content_json)
+        attributes[:content_json] = normalized_content_json if step_request_param_key?(:content_json)
         step.assign_attributes(attributes)
 
         if save_step_with_answer_keys(step)
@@ -65,8 +65,14 @@ module Api
       end
 
       def step_request_params
-        wrapped_params = params[:assignment_step]
-        wrapped_params.is_a?(ActionController::Parameters) ? wrapped_params : params
+        wrapped_params = request_body_params[:assignment_step]
+        if wrapped_params.is_a?(ActionController::Parameters) && wrapped_params.present?
+          ActionController::Parameters.new(
+            request_body_params.to_unsafe_h.except("assignment_step").merge(wrapped_params.to_unsafe_h)
+          )
+        else
+          request_body_params
+        end
       end
 
       def normalized_content_json
@@ -89,7 +95,7 @@ module Api
       def save_step_with_answer_keys(step)
         AssignmentStep.transaction do
           step.save!
-          sync_answer_keys!(step) if step_request_params.key?(:answer_keys)
+          sync_answer_keys!(step) if step_request_param_key?(:answer_keys)
         end
 
         true
@@ -113,6 +119,14 @@ module Api
 
       def serialize_step(step)
         serialize_assignment_step(step.reload, include_answer_keys: true)
+      end
+
+      def step_request_param_key?(key)
+        step_request_params.key?(key) || step_request_params.key?(key.to_s)
+      end
+
+      def request_body_params
+        @request_body_params ||= ActionController::Parameters.new(request.request_parameters)
       end
     end
   end

@@ -48,4 +48,56 @@ class Api::V1::AiSessionsFlowTest < ActionDispatch::IntegrationTest
     closed = JSON.parse(response.body)
     assert_equal "completed", closed["status"]
   end
+
+  test "student is limited to three ai questions per step" do
+    school = create_school(name: "ОУ Браќа Миладиновци", code: "OU-BM")
+    teacher = create_teacher(school: school, email: "ai.limit.teacher@example.com")
+    classroom = create_classroom(school: school, teacher: teacher, name: "8-A")
+    subject = create_subject(school: school, teacher: teacher, name: "Физика")
+    student = create_student(school: school, classroom: classroom, email: "ai.limit.student@example.com")
+    assignment = create_assignment(classroom: classroom, subject: subject, teacher: teacher, title: "Движење")
+    step = create_assignment_step(assignment: assignment, position: 1, title: "Чекор 1", prompt: "Опиши го движењето")
+    submission = create_submission(assignment: assignment, student: student, status: :in_progress, started_at: Time.current, submitted_at: nil)
+
+    headers = auth_headers_for(student, school: school)
+
+    post "/api/v1/ai_sessions", params: {
+      assignment_id: assignment.id,
+      submission_id: submission.id,
+      subject_id: subject.id,
+      title: "Помош по физика",
+      session_type: "assignment_help"
+    }, headers: headers
+    assert_response :created
+    session_id = JSON.parse(response.body)["id"]
+
+    3.times do |index|
+      post "/api/v1/ai_sessions/#{session_id}/messages", params: {
+        role: "user",
+        message_type: "question",
+        content: "Прашање #{index + 1}",
+        metadata: { assignment_step_id: step.id }
+      }, headers: headers
+
+      assert_response :created
+    end
+
+    post "/api/v1/ai_sessions/#{session_id}/messages", params: {
+      role: "user",
+      message_type: "question",
+      content: "Прашање 4",
+      metadata: { assignment_step_id: step.id }
+    }, headers: headers
+
+    assert_response :too_many_requests
+    payload = JSON.parse(response.body)
+    assert_equal "step_question_limit_reached", payload["code"]
+    assert_equal step.id, payload["assignment_step_id"]
+    assert_equal 3, payload["limit"]
+
+    get "/api/v1/ai_sessions/#{session_id}", headers: headers
+    assert_response :success
+    reloaded = JSON.parse(response.body)
+    assert_equal 6, reloaded["messages"].length
+  end
 end

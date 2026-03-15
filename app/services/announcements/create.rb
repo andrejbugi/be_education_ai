@@ -13,6 +13,8 @@ module Announcements
       announcement.status ||= :draft
 
       if announcement.save
+        announcement.update_column(:published_at, Time.current) if announcement.published? && announcement.published_at.blank?
+        Announcements::DispatchNotifications.new(announcement: announcement, actor: author).call if announcement.published?
         Result.new(success?: true, announcement: announcement, errors: [])
       else
         Result.new(success?: false, announcement: announcement, errors: announcement.errors.full_messages)

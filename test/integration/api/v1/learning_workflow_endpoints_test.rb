@@ -101,6 +101,47 @@ class Api::V1::LearningWorkflowEndpointsTest < ActionDispatch::IntegrationTest
     assert_equal 1, assignment.reload.assignment_steps.count
   end
 
+  test "teacher can add assignment step with answer keys via json payload" do
+    school = create_school
+    teacher = create_teacher(school: school)
+    classroom = create_classroom(school: school, teacher: teacher)
+    subject = create_subject(school: school, teacher: teacher)
+    assignment = create_assignment(classroom: classroom, subject: subject, teacher: teacher)
+
+    post "/api/v1/assignments/#{assignment.id}/steps",
+         params: {
+           position: 1,
+           title: "Zbir",
+           content: "25 + 25 = x",
+           prompt: "Kolku e x?",
+           resource_url: "",
+           example_answer: "x = 10",
+           step_type: "text",
+           required: true,
+           evaluation_mode: "regex",
+           metadata: {},
+           content_json: [{ type: "paragraph", text: "/" }],
+           answer_keys: [
+             {
+               value: "x = 50",
+               position: 1,
+               tolerance: nil,
+               case_sensitive: true,
+               metadata: {}
+             }
+           ]
+         },
+         headers: auth_headers_for(teacher, school: school),
+         as: :json
+
+    assert_response :created
+    payload = JSON.parse(response.body)
+    assert_equal "regex", payload["evaluation_mode"]
+    assert_equal 1, payload["answer_keys"].length
+    assert_equal "x = 50", payload["answer_keys"].first["value"]
+    assert_equal true, payload["answer_keys"].first["case_sensitive"]
+  end
+
   test "teacher can update assignment step" do
     school = create_school
     teacher = create_teacher(school: school)

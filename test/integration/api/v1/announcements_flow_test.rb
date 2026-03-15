@@ -62,4 +62,26 @@ class Api::V1::AnnouncementsFlowTest < ActionDispatch::IntegrationTest
     payload = JSON.parse(response.body)
     assert_includes payload["errors"], "Classroom must be present for classroom audience"
   end
+
+  test "creating a published classroom announcement notifies matching students immediately" do
+    school = create_school(code: "ANN-PUBLISHED")
+    teacher = create_teacher(school: school, email: "announce.teacher.published@example.com")
+    classroom = create_classroom(school: school, teacher: teacher, name: "9-A")
+    student = create_student(school: school, classroom: classroom, email: "announce.student.published@example.com")
+
+    post "/api/v1/announcements", params: {
+      classroom_id: classroom.id,
+      title: "Тест објава",
+      body: "Ова е директно објавена класна објава.",
+      audience_type: "classroom",
+      status: "published"
+    }, headers: auth_headers_for(teacher, school: school)
+
+    assert_response :created
+
+    notifications = student.notifications.order(:created_at)
+    assert_equal 1, notifications.count
+    assert_equal "announcement_published", notifications.last.notification_type
+    assert_equal "Тест објава", notifications.last.title
+  end
 end
