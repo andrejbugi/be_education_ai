@@ -29,6 +29,7 @@ class Announcement < ApplicationRecord
   validates :title, :body, :audience_type, presence: true
   validates :audience_type, inclusion: { in: AUDIENCE_TYPES }
   validate :associated_records_belong_to_same_school
+  validate :audience_target_presence
 
   def visible_to?(user)
     return false unless user.schools.exists?(id: school_id)
@@ -69,5 +70,14 @@ class Announcement < ApplicationRecord
     return unless author
 
     errors.add(:author_id, "must belong to the same school") unless author.schools.exists?(id: school_id)
+  end
+
+  def audience_target_presence
+    case audience_type
+    when "classroom"
+      errors.add(:classroom_id, "must be present for classroom audience") if classroom.blank?
+    when "subject"
+      errors.add(:subject_id, "must be present for subject audience") if subject.blank?
+    end
   end
 end

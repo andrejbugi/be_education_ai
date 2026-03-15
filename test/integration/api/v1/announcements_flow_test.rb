@@ -46,4 +46,20 @@ class Api::V1::AnnouncementsFlowTest < ActionDispatch::IntegrationTest
     notifications = JSON.parse(response.body)
     assert_equal 1, notifications["unread_count"]
   end
+
+  test "teacher cannot create classroom announcement without classroom_id" do
+    school = create_school(code: "ANN-CLASS")
+    teacher = create_teacher(school: school, email: "announce.teacher.two@example.com")
+
+    post "/api/v1/announcements", params: {
+      title: "Важно известување",
+      body: "Ова нема таргет клас.",
+      audience_type: "classroom",
+      priority: "important"
+    }, headers: auth_headers_for(teacher, school: school)
+
+    assert_response :unprocessable_entity
+    payload = JSON.parse(response.body)
+    assert_includes payload["errors"], "Classroom must be present for classroom audience"
+  end
 end
