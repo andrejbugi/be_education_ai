@@ -32,6 +32,7 @@ Rails.application.routes.draw do
         resources :classrooms, only: %i[index show]
         resources :subjects, only: :index
         resources :students, only: :show
+        resources :submissions, only: :show
       end
 
       resources :assignments, only: %i[index create show update] do

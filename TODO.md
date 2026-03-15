@@ -21,3 +21,9 @@ GET /api/v1/conversations
 POST /api/v1/conversations
 GET /api/v1/conversations/:id/messages
 POST /api/v1/conversations/:id/messages
+
+Performance / scaling:
+
+- Cache classroom student lists where possible, since class membership changes rarely, usually only every few months.
+- Do not generate performance snapshots on every dashboard request long-term.
+- Prefer background jobs for performance snapshot generation, then serve cached / stored snapshot data in dashboard responses.

@@ -19,6 +19,11 @@ Base path: `/api/v1`
 - `GET /teacher/classrooms/:id`
 - `GET /teacher/subjects`
 - `GET /teacher/students/:id`
+- `GET /teacher/submissions/:id`
+
+Teacher submission detail notes:
+- use `GET /teacher/submissions/:id` when a teacher opens one specific student submission for grading
+- it returns the submission, the student, assignment context, assignment `steps` with `answer_keys`, the student's `step_answers`, and the latest grade if one exists
 
 ## Assignments
 - `GET /assignments`
