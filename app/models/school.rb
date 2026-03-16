@@ -13,6 +13,7 @@ class School < ApplicationRecord
   has_many :attendance_records, dependent: :destroy
   has_many :student_performance_snapshots, dependent: :destroy
   has_many :ai_sessions, dependent: :destroy
+  has_many :conversations, dependent: :destroy
 
   validates :name, presence: true
 end

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_03_14_194002) do
+ActiveRecord::Schema[8.0].define(version: 2026_03_15_193000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -262,6 +262,36 @@ ActiveRecord::Schema[8.0].define(version: 2026_03_14_194002) do
     t.index ["commentable_type", "commentable_id"], name: "index_comments_on_commentable"
   end
 
+  create_table "conversation_participants", force: :cascade do |t|
+    t.bigint "conversation_id", null: false
+    t.bigint "user_id", null: false
+    t.datetime "joined_at", null: false
+    t.datetime "left_at"
+    t.bigint "last_read_message_id"
+    t.datetime "last_read_at"
+    t.boolean "active", default: true, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["conversation_id", "user_id"], name: "index_conversation_participants_on_conversation_id_and_user_id", unique: true
+    t.index ["conversation_id"], name: "index_conversation_participants_on_conversation_id"
+    t.index ["user_id"], name: "index_conversation_participants_on_user_id"
+  end
+
+  create_table "conversations", force: :cascade do |t|
+    t.bigint "school_id", null: false
+    t.string "conversation_type", default: "direct", null: false
+    t.bigint "created_by_id", null: false
+    t.boolean "active", default: true, null: false
+    t.bigint "last_message_id"
+    t.datetime "last_message_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["conversation_type"], name: "index_conversations_on_conversation_type"
+    t.index ["created_by_id"], name: "index_conversations_on_created_by_id"
+    t.index ["last_message_at"], name: "index_conversations_on_last_message_at"
+    t.index ["school_id"], name: "index_conversations_on_school_id"
+  end
+
   create_table "event_participants", force: :cascade do |t|
     t.bigint "calendar_event_id", null: false
     t.bigint "user_id", null: false
@@ -300,6 +330,70 @@ ActiveRecord::Schema[8.0].define(version: 2026_03_14_194002) do
     t.index ["classroom_id"], name: "index_homeroom_assignments_on_classroom_id_active_unique", unique: true, where: "(active = true)"
     t.index ["school_id"], name: "index_homeroom_assignments_on_school_id"
     t.index ["teacher_id"], name: "index_homeroom_assignments_on_teacher_id"
+  end
+
+  create_table "message_attachments", force: :cascade do |t|
+    t.bigint "message_id", null: false
+    t.string "attachment_type", default: "file", null: false
+    t.string "file_name"
+    t.string "content_type"
+    t.bigint "file_size"
+    t.string "storage_key"
+    t.string "file_url"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["message_id"], name: "index_message_attachments_on_message_id"
+  end
+
+  create_table "message_deliveries", force: :cascade do |t|
+    t.bigint "message_id", null: false
+    t.bigint "user_id", null: false
+    t.datetime "delivered_at", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["message_id", "user_id"], name: "index_message_deliveries_on_message_id_and_user_id", unique: true
+    t.index ["message_id"], name: "index_message_deliveries_on_message_id"
+    t.index ["user_id"], name: "index_message_deliveries_on_user_id"
+  end
+
+  create_table "message_reactions", force: :cascade do |t|
+    t.bigint "message_id", null: false
+    t.bigint "user_id", null: false
+    t.string "reaction", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["message_id", "user_id", "reaction"], name: "index_message_reactions_on_message_id_and_user_id_and_reaction", unique: true
+    t.index ["message_id"], name: "index_message_reactions_on_message_id"
+    t.index ["user_id"], name: "index_message_reactions_on_user_id"
+  end
+
+  create_table "message_reads", force: :cascade do |t|
+    t.bigint "message_id", null: false
+    t.bigint "user_id", null: false
+    t.datetime "read_at", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["message_id", "user_id"], name: "index_message_reads_on_message_id_and_user_id", unique: true
+    t.index ["message_id"], name: "index_message_reads_on_message_id"
+    t.index ["user_id"], name: "index_message_reads_on_user_id"
+  end
+
+  create_table "messages", force: :cascade do |t|
+    t.bigint "conversation_id", null: false
+    t.bigint "sender_id", null: false
+    t.text "body"
+    t.string "message_type", default: "text", null: false
+    t.string "status", default: "sent", null: false
+    t.bigint "reply_to_message_id"
+    t.datetime "edited_at"
+    t.datetime "deleted_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["conversation_id", "created_at"], name: "index_messages_on_conversation_id_and_created_at"
+    t.index ["conversation_id"], name: "index_messages_on_conversation_id"
+    t.index ["deleted_at"], name: "index_messages_on_deleted_at"
+    t.index ["reply_to_message_id"], name: "index_messages_on_reply_to_message_id"
+    t.index ["sender_id"], name: "index_messages_on_sender_id"
   end
 
   create_table "notifications", force: :cascade do |t|
@@ -458,6 +552,15 @@ ActiveRecord::Schema[8.0].define(version: 2026_03_14_194002) do
     t.index ["teacher_id"], name: "index_teacher_subjects_on_teacher_id"
   end
 
+  create_table "user_presence_statuses", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.string "status", default: "offline", null: false
+    t.datetime "last_seen_at", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["user_id"], name: "index_user_presence_statuses_on_user_id", unique: true
+  end
+
   create_table "user_roles", force: :cascade do |t|
     t.bigint "user_id", null: false
     t.bigint "role_id", null: false
@@ -510,6 +613,12 @@ ActiveRecord::Schema[8.0].define(version: 2026_03_14_194002) do
   add_foreign_key "classroom_users", "users"
   add_foreign_key "classrooms", "schools"
   add_foreign_key "comments", "users", column: "author_id"
+  add_foreign_key "conversation_participants", "conversations"
+  add_foreign_key "conversation_participants", "messages", column: "last_read_message_id"
+  add_foreign_key "conversation_participants", "users"
+  add_foreign_key "conversations", "messages", column: "last_message_id"
+  add_foreign_key "conversations", "schools"
+  add_foreign_key "conversations", "users", column: "created_by_id"
   add_foreign_key "event_participants", "calendar_events"
   add_foreign_key "event_participants", "users"
   add_foreign_key "grades", "submissions"
@@ -517,6 +626,16 @@ ActiveRecord::Schema[8.0].define(version: 2026_03_14_194002) do
   add_foreign_key "homeroom_assignments", "classrooms"
   add_foreign_key "homeroom_assignments", "schools"
   add_foreign_key "homeroom_assignments", "users", column: "teacher_id"
+  add_foreign_key "message_attachments", "messages"
+  add_foreign_key "message_deliveries", "messages"
+  add_foreign_key "message_deliveries", "users"
+  add_foreign_key "message_reactions", "messages"
+  add_foreign_key "message_reactions", "users"
+  add_foreign_key "message_reads", "messages"
+  add_foreign_key "message_reads", "users"
+  add_foreign_key "messages", "conversations"
+  add_foreign_key "messages", "messages", column: "reply_to_message_id"
+  add_foreign_key "messages", "users", column: "sender_id"
   add_foreign_key "notifications", "users"
   add_foreign_key "notifications", "users", column: "actor_id"
   add_foreign_key "school_users", "schools"
@@ -537,6 +656,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_03_14_194002) do
   add_foreign_key "teacher_profiles", "users"
   add_foreign_key "teacher_subjects", "subjects"
   add_foreign_key "teacher_subjects", "users", column: "teacher_id"
+  add_foreign_key "user_presence_statuses", "users"
   add_foreign_key "user_roles", "roles"
   add_foreign_key "user_roles", "users"
 end

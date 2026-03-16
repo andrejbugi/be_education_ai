@@ -18,6 +18,14 @@ Rails.application.routes.draw do
         post :close, on: :member
         resources :messages, only: %i[index create], controller: "ai_messages"
       end
+      resources :conversations, only: %i[index create] do
+        resources :messages, only: %i[index create], controller: "conversation_messages"
+      end
+      post "messages/:id/reactions", to: "message_reactions#create"
+      delete "messages/:id/reactions", to: "message_reactions#destroy"
+      post "messages/:id/read", to: "message_reads#create"
+      post "messages/:id/deliver", to: "message_deliveries#create"
+      post "presence/update", to: "presence#update"
 
       get "classrooms/:classroom_id/attendance", to: "classroom_attendance#show"
       get "students/:id/attendance", to: "student_attendance#show"
