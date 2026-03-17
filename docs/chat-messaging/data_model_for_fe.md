@@ -10,6 +10,7 @@ Important:
 - direct conversations are implemented now
 - group conversations are not enabled yet
 - student-student direct chat is blocked
+- Redis-backed Action Cable is configured on the backend, but chat realtime events are not implemented yet
 
 ## Core entities
 
@@ -313,5 +314,5 @@ export type ChatConversation = {
 - no delete message endpoint yet
 - no group conversation creation flow yet
 - no participant add/remove flow yet
-- no websocket or realtime push transport yet
+- no chat websocket channels or broadcasts yet
 - list endpoints use offset pagination only

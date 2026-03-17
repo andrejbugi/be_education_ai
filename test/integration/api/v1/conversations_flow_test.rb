@@ -1,6 +1,8 @@
 require "test_helper"
 
 class Api::V1::ConversationsFlowTest < ActionDispatch::IntegrationTest
+  include ActionCable::TestHelper
+
   test "teachers can message each other with attachments reactions and delivery tracking" do
     school = create_school(code: "CHAT-TEACHERS")
     teacher = create_teacher(school: school, email: "chat.teacher.one@example.com", first_name: "Ana", last_name: "Teacher")
@@ -30,14 +32,23 @@ class Api::V1::ConversationsFlowTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_equal conversation_id, JSON.parse(response.body)["id"]
 
-    post "/api/v1/conversations/#{conversation_id}/messages", params: {
-      body: "Please review the attached lesson plan.",
-      files: [uploaded_test_file(filename: "lesson-plan.pdf", content_type: "application/pdf", content: "Lesson plan")]
-    }, headers: teacher_headers
+    stream = ConversationChannel.broadcasting_for(Conversation.find(conversation_id))
+
+    assert_broadcasts(stream, 1) do
+      post "/api/v1/conversations/#{conversation_id}/messages", params: {
+        body: "Please review the attached lesson plan.",
+        files: [uploaded_test_file(filename: "lesson-plan.pdf", content_type: "application/pdf", content: "Lesson plan")]
+      }, headers: teacher_headers
+    end
 
     assert_response :created
     message_payload = JSON.parse(response.body)
     message_id = message_payload["id"]
+    broadcast_payload = JSON.parse(broadcasts(stream).last)
+    assert_equal "message.created", broadcast_payload["type"]
+    assert_equal conversation_id, broadcast_payload["conversation_id"]
+    assert_equal "Please review the attached lesson plan.", broadcast_payload.dig("message", "body")
+    assert_equal teacher.id, broadcast_payload.dig("message", "sender_id")
     assert_equal "sent", message_payload["status"]
     assert_equal [teacher.id], message_payload["delivered_user_ids"]
     assert_equal [teacher.id], message_payload["read_user_ids"]

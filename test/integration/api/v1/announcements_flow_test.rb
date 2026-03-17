@@ -84,4 +84,60 @@ class Api::V1::AnnouncementsFlowTest < ActionDispatch::IntegrationTest
     assert_equal "announcement_published", notifications.last.notification_type
     assert_equal "Тест објава", notifications.last.title
   end
+
+  test "teacher can upload a file to an announcement and student can read it" do
+    school = create_school(code: "ANN-FILE")
+    teacher = create_teacher(school: school, email: "announce.teacher.file@example.com")
+    student = create_student(school: school, email: "announce.student.file@example.com")
+
+    teacher_headers = auth_headers_for(teacher, school: school)
+    student_headers = auth_headers_for(student, school: school)
+
+    post "/api/v1/announcements", params: {
+      title: "Училишен распоред",
+      body: "Погледнете го прикачениот документ.",
+      audience_type: "school",
+      status: "published",
+      file: uploaded_test_file(filename: "school-notice.pdf", content_type: "application/pdf", content: "School notice")
+    }, headers: teacher_headers
+
+    assert_response :created
+    payload = JSON.parse(response.body)
+    assert_equal "school-notice.pdf", payload.dig("uploaded_file", "filename")
+    assert_includes payload["file_url"], "/rails/active_storage/blobs/"
+
+    get "/api/v1/announcements/#{payload["id"]}", headers: student_headers
+
+    assert_response :success
+    detail_payload = JSON.parse(response.body)
+    assert_equal "school-notice.pdf", detail_payload.dig("uploaded_file", "filename")
+    assert_includes detail_payload["file_url"], "/rails/active_storage/blobs/"
+  end
+
+  test "teacher can remove an uploaded announcement file" do
+    school = create_school(code: "ANN-REMOVE")
+    teacher = create_teacher(school: school, email: "announce.teacher.remove@example.com")
+    announcement = Announcement.create!(
+      school: school,
+      author: teacher,
+      title: "Прилог",
+      body: "Има прилог",
+      audience_type: "school",
+      status: :published,
+      published_at: Time.current
+    )
+    announcement.file.attach(
+      uploaded_test_file(filename: "old-note.txt", content_type: "text/plain", content: "Old note")
+    )
+
+    patch "/api/v1/announcements/#{announcement.id}", params: {
+      remove_file: true
+    }, headers: auth_headers_for(teacher, school: school)
+
+    assert_response :success
+    payload = JSON.parse(response.body)
+    assert_nil payload["file_url"]
+    assert_nil payload["uploaded_file"]
+    assert_not announcement.reload.file.attached?
+  end
 end

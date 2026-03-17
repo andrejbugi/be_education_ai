@@ -50,6 +50,13 @@ env:
     # Use be_education_ai-db for a db accessory server on same machine via local kamal docker network.
     # DB_HOST: 192.168.0.2
 
+    # Action Cable uses Redis in development and production.
+    # Point this at your production Redis instance or Kamal Redis accessory.
+    # REDIS_URL: redis://be_education_ai-redis:6379/1
+
+    # Comma-separated list of frontend origins allowed to open websocket connections.
+    # ACTION_CABLE_ALLOWED_REQUEST_ORIGINS: https://app.example.com
+
     # Log everything from Rails
     # RAILS_LOG_LEVEL: debug
 

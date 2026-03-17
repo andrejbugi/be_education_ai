@@ -7,6 +7,11 @@ This doc focuses on the request and response flow frontend should use for chat.
 For exact entity fields, see:
 - [data_model_for_fe.md](./data_model_for_fe.md)
 
+Current realtime status:
+- backend is configured with Redis-backed Action Cable at `/cable`
+- new-message realtime is implemented for conversation subscriptions
+- delivered, read, reactions, and presence still use the existing HTTP flow
+
 ## Headers
 
 Send on all protected requests:
@@ -20,10 +25,85 @@ X-School-Id: <selected_school_id>
 
 1. Load conversations with `GET /api/v1/conversations`.
 2. When user opens one conversation, load messages with `GET /api/v1/conversations/:conversation_id/messages`.
-3. After rendering unread incoming messages, call `POST /api/v1/messages/:id/deliver` and/or `POST /api/v1/messages/:id/read`.
-4. When user sends a message, call `POST /api/v1/conversations/:conversation_id/messages`.
-5. For reactions, call `POST /api/v1/messages/:id/reactions` or `DELETE /api/v1/messages/:id/reactions`.
-6. Refresh presence periodically with `POST /api/v1/presence/update`.
+3. Open a websocket connection to `/cable?token=<jwt>`.
+4. Subscribe to the current conversation channel.
+5. When a `message.created` event arrives, append the message to local state.
+6. After rendering unread incoming messages, call `POST /api/v1/messages/:id/deliver` and/or `POST /api/v1/messages/:id/read`.
+7. When user sends a message, call `POST /api/v1/conversations/:conversation_id/messages`.
+8. For reactions, call `POST /api/v1/messages/:id/reactions` or `DELETE /api/v1/messages/:id/reactions`.
+9. Refresh presence periodically with `POST /api/v1/presence/update`.
+
+## Websocket connection
+
+Websocket endpoint:
+
+```text
+/cable?token=<jwt>
+```
+
+Example:
+
+```text
+ws://localhost:3000/cable?token=YOUR_JWT
+```
+
+Authentication:
+- websocket auth uses the JWT in the `token` query param
+- the backend rejects the connection if the token is missing, invalid, expired, or belongs to an inactive user
+
+## Conversation channel subscription
+
+Channel:
+
+```text
+ConversationChannel
+```
+
+Subscribe payload:
+
+```json
+{
+  "command": "subscribe",
+  "identifier": "{\"channel\":\"ConversationChannel\",\"conversation_id\":11}"
+}
+```
+
+Rules:
+- user must be an active participant in that conversation
+- non-participants are rejected
+
+## Realtime event currently implemented
+
+Current event:
+
+```json
+{
+  "type": "message.created",
+  "conversation_id": 11,
+  "message": {
+    "id": 99,
+    "conversation_id": 11,
+    "sender_id": 8,
+    "sender_name": "Boris Teacher",
+    "body": "Please review this file.",
+    "message_type": "file",
+    "status": "sent",
+    "reply_to_message_id": null,
+    "edited_at": null,
+    "deleted_at": null,
+    "created_at": "2026-03-17T12:00:00.000Z",
+    "updated_at": "2026-03-17T12:00:00.000Z",
+    "attachments": [],
+    "reactions": [],
+    "delivered_user_ids": [8],
+    "read_user_ids": [8]
+  }
+}
+```
+
+Notes:
+- `message` uses the same shape as the normal HTTP chat message payload
+- sender also receives the broadcast if subscribed to the same conversation
 
 ## 1) List conversations
 
@@ -244,7 +324,9 @@ Example error response:
 - if `last_message` exists, use that for preview text and timestamp
 - if `body` is blank and `attachments.length > 0`, render an attachment-only preview
 - use optimistic UI carefully for reactions and sends if desired, but backend returns the full updated message after each state mutation
-- since there is no realtime transport yet, polling or manual refresh is needed
+- keep the HTTP message create flow as the source of truth for sending
+- use realtime only to append incoming `message.created` updates
+- keep polling or manual refresh for conversation list updates unless FE also refetches inbox on incoming events
 
 ## Not implemented yet
 
@@ -252,4 +334,4 @@ Example error response:
 - delete message
 - group chat management
 - typing indicators
-- realtime subscriptions
+- websocket broadcasts for delivered, read, reactions, and presence

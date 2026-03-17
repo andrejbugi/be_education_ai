@@ -29,13 +29,19 @@ module Api
         ).call
 
         if result.success?
+          serialized_message = serialize_message(reload_message(result.message))
+          ChatRealtime::BroadcastMessageCreated.new(
+            message: result.message,
+            payload: serialized_message
+          ).call
+
           log_activity(
             action: "conversation_message_created",
             trackable: result.message,
             metadata: { conversation_id: @conversation.id, message_id: result.message.id }
           )
 
-          render json: serialize_message(reload_message(result.message)), status: :created
+          render json: serialized_message, status: :created
         else
           render json: { errors: result.errors }, status: :unprocessable_entity
         end

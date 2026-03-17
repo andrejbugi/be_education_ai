@@ -1,11 +1,21 @@
 # Redis Setup And Usage For Chat Messaging
 
-This doc is for later when we switch chat updates to realtime behavior with Action Cable + Redis.
+This doc covers the Redis setup for Action Cable in this project.
 
 Right now chat works through normal API requests.
 Redis is not required for the current polling-based flow.
 
-When we add realtime chat, Redis can be used as the Action Cable adapter so development and production behave the same way.
+The backend is now configured to use Redis for Action Cable in:
+
+- development
+- production
+
+Current backend files:
+
+- `config/cable.yml`
+- `config/routes.rb`
+- `config/environments/development.rb`
+- `config/environments/production.rb`
 
 ## What Redis would be used for
 
@@ -27,7 +37,7 @@ sudo apt update
 sudo apt install -y redis-server redis-tools
 
 sudo sed -i 's/^supervised .*/supervised systemd/' /etc/redis/redis.conf
-sudo sed -i 's/^#\\? bind .*/bind 127.0.0.1 ::1/' /etc/redis/redis.conf
+sudo sed -i 's/^#\? bind .*/bind 127.0.0.1 ::1/' /etc/redis/redis.conf
 sudo sed -i 's/^protected-mode .*/protected-mode yes/' /etc/redis/redis.conf
 
 sudo systemctl enable redis-server
@@ -83,9 +93,9 @@ Open Redis CLI:
 redis-cli
 ```
 
-## Suggested Rails env var
+## Redis env var used by the backend
 
-When we wire Redis into Action Cable, a common env var is:
+The backend uses:
 
 ```bash
 REDIS_URL=redis://127.0.0.1:6379/1
@@ -104,9 +114,9 @@ echo 'export REDIS_URL=redis://127.0.0.1:6379/1' >> ~/.bashrc
 source ~/.bashrc
 ```
 
-## Likely future Rails cable config
+## Current Rails cable config shape
 
-When we switch to Redis-backed Action Cable, `config/cable.yml` will likely look like this:
+The project is configured like this:
 
 ```yml
 development:
@@ -119,7 +129,7 @@ test:
 
 production:
   adapter: redis
-  url: <%= ENV.fetch("REDIS_URL") %>
+  url: <%= ENV.fetch("REDIS_URL", "redis://127.0.0.1:6379/1") %>
   channel_prefix: be_education_ai_production
 ```
 
@@ -127,13 +137,58 @@ Notes:
 
 - `channel_prefix` helps separate apps/environments
 - database `/1` is just one Redis logical DB choice for development
-- production often uses a dedicated Redis instance or managed Redis service
+- production should still set a real `REDIS_URL` explicitly
+- the fallback value exists mainly so local boot and config inspection do not break
+
+## Cable endpoint
+
+The backend mounts Action Cable at:
+
+```text
+/cable
+```
+
+That means the future frontend websocket URL will typically be based on `/cable`.
+
+Examples:
+
+```text
+ws://localhost:3000/cable
+wss://app.example.com/cable
+```
+
+Current auth style:
+
+```text
+/cable?token=<jwt>
+```
+
+The websocket connection uses the same JWT concept as the HTTP API, but passes it in the query string.
+
+## Allowed origins
+
+Development allows common local frontend origins like:
+
+- `http://localhost:<port>`
+- `http://127.0.0.1:<port>`
+
+Production can be controlled with:
+
+```bash
+ACTION_CABLE_ALLOWED_REQUEST_ORIGINS=https://app.example.com
+```
+
+For multiple origins:
+
+```bash
+ACTION_CABLE_ALLOWED_REQUEST_ORIGINS=https://app.example.com,https://www.app.example.com
+```
 
 ## How FE would benefit after Redis + Action Cable
 
-Once Redis-backed Action Cable is added, FE could subscribe to chat updates instead of polling.
+FE can now subscribe to new-message updates for chat conversations instead of relying only on polling.
 
-Typical events we would broadcast:
+Current and future event examples:
 
 - new message created
 - message delivered
@@ -146,15 +201,24 @@ That would remove the need to manually refresh the chat screen to see updates.
 
 ## Production expectations later
 
-If we move to Redis-backed Cable in production, expect:
+With the current Redis-backed Cable setup, expect:
 
 - Rails app still handles websocket connections
 - Redis handles pub/sub fanout
 - proxy or load balancer must allow websocket upgrades
 - app instances should all be able to reach the same Redis
 
-## What we have today
+## What is still not done
 
-Today this project still uses normal API requests for chat refresh behavior.
+Redis-backed Action Cable is configured, and the minimal chat realtime flow is in place for new messages.
 
-So this Redis setup doc is preparation for the next step, not a requirement for current chat API usage.
+What is already done:
+
+- token-authenticated websocket connection
+- per-conversation subscription authorization
+- `message.created` broadcasts for new chat messages
+
+The remaining work for fuller live chat is:
+
+- add richer event coverage for delivered, read, reactions, and presence
+- subscribe from FE

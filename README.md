@@ -38,3 +38,33 @@ Detailed guide with request/response examples:
 - [frontend_assignment_submission_checks_guide.md](/home/andrejbugi/projects/be_education_ai/docs/frontend_assignment_submission_checks_guide.md)
 - [schools_frontend_guide.md](/home/andrejbugi/projects/be_education_ai/docs/schools_frontend_guide.md)
 - [seeded_school_data_summary.md](/home/andrejbugi/projects/be_education_ai/docs/seeded_school_data_summary.md)
+
+
+## Redis
+
+This project now uses Redis for Action Cable.
+
+Development default:
+- `REDIS_URL=redis://127.0.0.1:6379/1`
+
+WSL install commands:
+
+```bash
+sudo apt update
+sudo apt install -y redis-server redis-tools
+
+sudo sed -i 's/^supervised .*/supervised systemd/' /etc/redis/redis.conf
+sudo sed -i 's/^#\\? bind .*/bind 127.0.0.1 ::1/' /etc/redis/redis.conf
+sudo sed -i 's/^protected-mode .*/protected-mode yes/' /etc/redis/redis.conf
+
+sudo systemctl enable redis-server
+sudo systemctl restart redis-server
+sudo systemctl status redis-server --no-pager
+
+redis-cli ping
+redis-server --version
+redis-cli INFO server
+```
+
+See the chat Redis setup guide:
+- [redis_setup.md](/home/andrejbugi/projects/be_education_ai/docs/chat-messaging/redis_setup.md)

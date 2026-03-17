@@ -78,6 +78,8 @@ Main fields:
 - `author`
 - `classroom` nullable
 - `subject` nullable
+- `file_url` nullable
+- `uploaded_file` nullable
 
 Typical response shape:
 ```json
@@ -100,7 +102,14 @@ Typical response shape:
     "id": 10,
     "name": "7-A"
   },
-  "subject": null
+  "subject": null,
+  "file_url": "http://localhost:3000/rails/active_storage/blobs/redirect/...",
+  "uploaded_file": {
+    "filename": "notice.pdf",
+    "byte_size": 102400,
+    "content_type": "application/pdf",
+    "url": "http://localhost:3000/rails/active_storage/blobs/redirect/..."
+  }
 }
 ```
 
@@ -116,10 +125,13 @@ Frontend uses:
 - student dashboard announcements feed
 - teacher authored-announcement list
 - priority badges and publish/archive actions
+- attachment preview / download for uploaded announcement files
 
 Notes:
 - Students only see announcements visible to them.
 - Publishing creates notifications for recipients.
+- `POST /announcements` and `PATCH /announcements/:id` now accept multipart `file`.
+- `PATCH /announcements/:id` also accepts `remove_file=true` to clear the uploaded attachment.
 
 ## 3. Attendance records
 Purpose: track presence, absence, lateness, and excused attendance.

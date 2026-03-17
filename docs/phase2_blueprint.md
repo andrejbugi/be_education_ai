@@ -68,6 +68,7 @@ Use cases:
 - subject-specific announcements
 - reminders from teachers
 - visibility in student and teacher dashboards
+- downloadable files attached to announcements
 
 ### 3.3 Attendance
 This adds school operation support beyond learning content.
@@ -158,6 +159,7 @@ Recommended fields:
 - `subject_id` nullable
 - `title`
 - `body`
+- attachment via Active Storage (`file`)
 - `status`
 - `published_at`
 - `starts_at` nullable

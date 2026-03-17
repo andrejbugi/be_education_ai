@@ -40,7 +40,11 @@ module Api
         return if performed?
         return render_forbidden unless can_manage_announcement?(@announcement)
 
-        if @announcement.update(announcement_params)
+        @announcement.assign_attributes(announcement_params.except(:file, :remove_file))
+        remove_uploaded_file(@announcement) if remove_file?
+        attach_uploaded_file(@announcement, announcement_params[:file])
+
+        if @announcement.save
           render json: serialize_announcement(@announcement.reload)
         else
           render json: { errors: @announcement.errors.full_messages }, status: :unprocessable_entity
@@ -76,12 +80,14 @@ module Api
       private
 
       def set_announcement
-        @announcement = Announcement.includes(:school, :author, :classroom, :subject, comments: :author).find_by(id: params[:id])
+        @announcement = Announcement.with_attached_file
+                                    .includes(:school, :author, :classroom, :subject, comments: :author)
+                                    .find_by(id: params[:id])
         render_not_found unless @announcement
       end
 
       def scoped_announcements
-        scope = Announcement.includes(:school, :author, :classroom, :subject)
+        scope = Announcement.with_attached_file.includes(:school, :author, :classroom, :subject)
         school = current_school
         scope = scope.where(school_id: school.id) if school
 
@@ -103,10 +109,24 @@ module Api
       end
 
       def announcement_params
-        params.permit(:classroom_id, :subject_id, :title, :body, :status, :published_at, :starts_at, :ends_at, :priority, :audience_type)
+        params.permit(
+          :classroom_id,
+          :subject_id,
+          :title,
+          :body,
+          :status,
+          :published_at,
+          :starts_at,
+          :ends_at,
+          :priority,
+          :audience_type,
+          :file,
+          :remove_file
+        )
       end
 
       def serialize_announcement(announcement, include_comments: false)
+        attached_file_url = announcement_file_url(announcement)
         payload = {
           id: announcement.id,
           school_id: announcement.school_id,
@@ -123,7 +143,9 @@ module Api
             full_name: announcement.author.full_name
           },
           classroom: announcement.classroom && { id: announcement.classroom_id, name: announcement.classroom.name },
-          subject: announcement.subject && { id: announcement.subject_id, name: announcement.subject.name }
+          subject: announcement.subject && { id: announcement.subject_id, name: announcement.subject.name },
+          file_url: attached_file_url,
+          uploaded_file: serialize_uploaded_file(announcement, attached_file_url)
         }
 
         if include_comments
@@ -138,6 +160,40 @@ module Api
         end
 
         payload
+      end
+
+      def remove_file?
+        ActiveModel::Type::Boolean.new.cast(announcement_params[:remove_file])
+      end
+
+      def attach_uploaded_file(announcement, uploaded_file)
+        return if uploaded_file.blank?
+
+        announcement.file.attach(uploaded_file)
+      end
+
+      def remove_uploaded_file(announcement)
+        return unless announcement.file.attached?
+
+        announcement.file.purge
+      end
+
+      def serialize_uploaded_file(announcement, attached_file_url = nil)
+        return nil unless announcement.file.attached?
+
+        blob = announcement.file.blob
+        {
+          filename: blob.filename.to_s,
+          byte_size: blob.byte_size,
+          content_type: blob.content_type,
+          url: attached_file_url || announcement_file_url(announcement)
+        }
+      end
+
+      def announcement_file_url(announcement)
+        return nil unless announcement.file.attached?
+
+        rails_blob_url(announcement.file, host: request.base_url)
       end
     end
   end

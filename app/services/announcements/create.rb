@@ -9,8 +9,9 @@ module Announcements
     end
 
     def call
-      announcement = school.announcements.new(params.merge(author: author))
+      announcement = school.announcements.new(params.except(:file, :remove_file).merge(author: author))
       announcement.status ||= :draft
+      announcement.file.attach(params[:file]) if params[:file].present?
 
       if announcement.save
         announcement.update_column(:published_at, Time.current) if announcement.published? && announcement.published_at.blank?
