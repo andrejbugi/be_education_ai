@@ -32,7 +32,7 @@ class Api::V1::ConversationsFlowTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_equal conversation_id, JSON.parse(response.body)["id"]
 
-    stream = ConversationChannel.broadcasting_for(Conversation.find(conversation_id))
+    stream = ChatRealtime::ConversationStream.name_for(conversation_id)
 
     assert_broadcasts(stream, 1) do
       post "/api/v1/conversations/#{conversation_id}/messages", params: {

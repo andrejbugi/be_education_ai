@@ -3,7 +3,7 @@ class ConversationChannel < ApplicationCable::Channel
     conversation = Conversation.find_by(id: params[:conversation_id])
     reject unless subscribable?(conversation)
 
-    stream_for conversation
+    stream_from ChatRealtime::ConversationStream.name_for(conversation)
   end
 
   private

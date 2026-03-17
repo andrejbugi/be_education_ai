@@ -39,6 +39,9 @@ class Api::V1::DashboardAndViewsTest < ActionDispatch::IntegrationTest
     payload = JSON.parse(response.body)
     assert_equal 1, payload["announcements"].length
     assert_not_nil payload["performance_snapshot"]
+    assert_not_nil payload["progress"]
+    assert_operator payload["progress"]["total_xp"], :>, 0
+    assert_equal "ai_explorer", payload["progress"]["badges"].first["code"]
     assert_not_nil payload["ai_resume"]
   end
 

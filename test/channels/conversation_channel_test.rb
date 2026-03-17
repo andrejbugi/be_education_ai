@@ -16,7 +16,7 @@ class ConversationChannelTest < ActionCable::Channel::TestCase
     subscribe(conversation_id: conversation.id)
 
     assert subscription.confirmed?
-    assert_has_stream_for conversation
+    assert_has_stream ChatRealtime::ConversationStream.name_for(conversation)
   end
 
   test "rejects users who are not active participants" do

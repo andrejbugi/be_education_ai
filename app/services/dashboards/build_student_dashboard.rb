@@ -24,6 +24,7 @@ module Dashboards
         deadlines: serialize_deadlines,
         announcements: serialize_announcements,
         performance_snapshot: serialize_performance_snapshot,
+        progress: serialize_progress,
         ai_resume: serialize_ai_resume,
         notifications_unread: student.notifications.unread.count,
         recent_activity: serialize_activity
@@ -121,6 +122,15 @@ module Dashboards
         session_type: session.session_type,
         last_activity_at: session.last_activity_at
       }
+    end
+
+    def serialize_progress
+      return nil unless school
+
+      result = Gamification::RefreshStudentProgress.new(student: student, school: school).call
+      return nil unless result.success?
+
+      Gamification::Serialization.profile_payload(result.profile, badges_limit: 3)
     end
   end
 end

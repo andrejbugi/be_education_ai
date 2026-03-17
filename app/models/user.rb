@@ -28,6 +28,8 @@ class User < ApplicationRecord
   has_many :attendance_records, foreign_key: :student_id, dependent: :destroy
   has_many :recorded_attendance_records, foreign_key: :teacher_id, class_name: "AttendanceRecord", dependent: :destroy
   has_many :student_performance_snapshots, foreign_key: :student_id, dependent: :destroy
+  has_many :student_progress_profiles, foreign_key: :student_id, dependent: :destroy
+  has_many :student_badges, foreign_key: :student_id, dependent: :destroy
   has_many :ai_sessions, dependent: :destroy
   has_many :created_conversations, class_name: "Conversation", foreign_key: :created_by_id
   has_many :conversation_participants, dependent: :destroy

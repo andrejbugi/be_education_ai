@@ -118,6 +118,9 @@ class Api::V1::Phase2EndpointsTest < ActionDispatch::IntegrationTest
     payload = JSON.parse(response.body)
     assert_equal "monthly", payload["period_type"]
     assert_equal 1, payload["completed_assignments_count"]
+    assert_not_nil payload["progress"]
+    assert_equal 1, payload["progress"]["completed_assignments_count"]
+    assert_includes payload["progress"]["badges"].map { |badge| badge["code"] }, "first_completion"
   end
 
   test "teacher can list stored student performance snapshots" do

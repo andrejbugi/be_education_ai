@@ -12,17 +12,18 @@ module Api
             school: school,
             period_type: params[:period_type].presence || "monthly"
           ).call
+          progress_result = Gamification::RefreshStudentProgress.new(student: current_user, school: school).call
 
-          if result.success?
-            render json: serialize_snapshot(result.snapshot)
+          if result.success? && progress_result.success?
+            render json: serialize_snapshot(result.snapshot, progress_result.profile)
           else
-            render json: { errors: result.errors }, status: :unprocessable_entity
+            render json: { errors: result.errors + progress_result.errors }, status: :unprocessable_entity
           end
         end
 
         private
 
-        def serialize_snapshot(snapshot)
+        def serialize_snapshot(snapshot, progress_profile)
           {
             id: snapshot.id,
             period_type: snapshot.period_type,
@@ -36,7 +37,8 @@ module Api
             attendance_rate: snapshot.attendance_rate,
             engagement_score: snapshot.engagement_score,
             snapshot_data: snapshot.snapshot_data,
-            generated_at: snapshot.generated_at
+            generated_at: snapshot.generated_at,
+            progress: Gamification::Serialization.profile_payload(progress_profile)
           }
         end
       end

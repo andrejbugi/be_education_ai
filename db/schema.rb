@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_03_17_193000) do
+ActiveRecord::Schema[8.0].define(version: 2026_03_17_203000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -501,6 +501,24 @@ ActiveRecord::Schema[8.0].define(version: 2026_03_17_193000) do
     t.index ["code"], name: "index_schools_on_code", unique: true
   end
 
+  create_table "student_badges", force: :cascade do |t|
+    t.bigint "school_id", null: false
+    t.bigint "student_id", null: false
+    t.bigint "student_progress_profile_id", null: false
+    t.string "code", null: false
+    t.string "name", null: false
+    t.text "description"
+    t.datetime "awarded_at", null: false
+    t.jsonb "metadata", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["school_id", "student_id", "code"], name: "index_student_badges_on_school_id_and_student_id_and_code", unique: true
+    t.index ["school_id"], name: "index_student_badges_on_school_id"
+    t.index ["student_id"], name: "index_student_badges_on_student_id"
+    t.index ["student_progress_profile_id", "awarded_at"], name: "idx_on_student_progress_profile_id_awarded_at_c30b442be2"
+    t.index ["student_progress_profile_id"], name: "index_student_badges_on_student_progress_profile_id"
+  end
+
   create_table "student_performance_snapshots", force: :cascade do |t|
     t.bigint "school_id", null: false
     t.bigint "student_id", null: false
@@ -538,6 +556,28 @@ ActiveRecord::Schema[8.0].define(version: 2026_03_17_193000) do
     t.datetime "updated_at", null: false
     t.index ["school_id"], name: "index_student_profiles_on_school_id"
     t.index ["user_id"], name: "index_student_profiles_on_user_id", unique: true
+  end
+
+  create_table "student_progress_profiles", force: :cascade do |t|
+    t.bigint "school_id", null: false
+    t.bigint "student_id", null: false
+    t.integer "total_xp", default: 0, null: false
+    t.integer "current_level", default: 1, null: false
+    t.integer "current_streak", default: 0, null: false
+    t.integer "longest_streak", default: 0, null: false
+    t.integer "completed_assignments_count", default: 0, null: false
+    t.integer "graded_assignments_count", default: 0, null: false
+    t.integer "badges_count", default: 0, null: false
+    t.decimal "average_grade", precision: 5, scale: 2
+    t.decimal "attendance_rate", precision: 5, scale: 2
+    t.date "last_active_on"
+    t.datetime "last_synced_at"
+    t.jsonb "metadata", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["school_id", "student_id"], name: "index_student_progress_profiles_on_school_id_and_student_id", unique: true
+    t.index ["school_id"], name: "index_student_progress_profiles_on_school_id"
+    t.index ["student_id"], name: "index_student_progress_profiles_on_student_id"
   end
 
   create_table "subjects", force: :cascade do |t|
@@ -711,11 +751,16 @@ ActiveRecord::Schema[8.0].define(version: 2026_03_17_193000) do
   add_foreign_key "notifications", "users", column: "actor_id"
   add_foreign_key "school_users", "schools"
   add_foreign_key "school_users", "users"
+  add_foreign_key "student_badges", "schools"
+  add_foreign_key "student_badges", "student_progress_profiles"
+  add_foreign_key "student_badges", "users", column: "student_id"
   add_foreign_key "student_performance_snapshots", "classrooms"
   add_foreign_key "student_performance_snapshots", "schools"
   add_foreign_key "student_performance_snapshots", "users", column: "student_id"
   add_foreign_key "student_profiles", "schools"
   add_foreign_key "student_profiles", "users"
+  add_foreign_key "student_progress_profiles", "schools"
+  add_foreign_key "student_progress_profiles", "users", column: "student_id"
   add_foreign_key "subjects", "schools"
   add_foreign_key "submission_step_answers", "assignment_steps"
   add_foreign_key "submission_step_answers", "submissions"

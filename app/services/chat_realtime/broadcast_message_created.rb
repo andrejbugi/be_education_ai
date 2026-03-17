@@ -6,8 +6,8 @@ module ChatRealtime
     end
 
     def call
-      ConversationChannel.broadcast_to(
-        message.conversation,
+      ActionCable.server.broadcast(
+        ChatRealtime::ConversationStream.name_for(message.conversation_id),
         {
           type: "message.created",
           conversation_id: message.conversation_id,
