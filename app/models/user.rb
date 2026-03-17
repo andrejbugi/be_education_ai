@@ -37,6 +37,9 @@ class User < ApplicationRecord
   has_many :message_deliveries, dependent: :destroy
   has_many :message_reads, dependent: :destroy
   has_one :user_presence_status, dependent: :destroy
+  has_many :created_discussion_spaces, class_name: "DiscussionSpace", foreign_key: :created_by_id, dependent: :destroy
+  has_many :discussion_threads, foreign_key: :creator_id, dependent: :destroy
+  has_many :discussion_posts, foreign_key: :author_id, dependent: :destroy
 
   has_many :comments, foreign_key: :author_id, dependent: :destroy
   has_many :notifications, dependent: :destroy

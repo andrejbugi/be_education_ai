@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_03_15_193000) do
+ActiveRecord::Schema[8.0].define(version: 2026_03_17_193000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -290,6 +290,67 @@ ActiveRecord::Schema[8.0].define(version: 2026_03_15_193000) do
     t.index ["created_by_id"], name: "index_conversations_on_created_by_id"
     t.index ["last_message_at"], name: "index_conversations_on_last_message_at"
     t.index ["school_id"], name: "index_conversations_on_school_id"
+  end
+
+  create_table "discussion_posts", force: :cascade do |t|
+    t.bigint "discussion_thread_id", null: false
+    t.bigint "author_id", null: false
+    t.bigint "parent_post_id"
+    t.text "body", null: false
+    t.string "status", default: "visible", null: false
+    t.datetime "edited_at"
+    t.datetime "deleted_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["author_id"], name: "index_discussion_posts_on_author_id"
+    t.index ["discussion_thread_id", "created_at"], name: "index_discussion_posts_on_discussion_thread_id_and_created_at"
+    t.index ["discussion_thread_id", "parent_post_id"], name: "idx_on_discussion_thread_id_parent_post_id_2d40aeeee6"
+    t.index ["discussion_thread_id"], name: "index_discussion_posts_on_discussion_thread_id"
+    t.index ["parent_post_id"], name: "index_discussion_posts_on_parent_post_id"
+  end
+
+  create_table "discussion_spaces", force: :cascade do |t|
+    t.bigint "school_id", null: false
+    t.string "space_type", null: false
+    t.string "title", null: false
+    t.text "description"
+    t.string "status", default: "active", null: false
+    t.string "visibility", default: "students_and_teachers", null: false
+    t.bigint "assignment_id"
+    t.bigint "classroom_id"
+    t.bigint "subject_id"
+    t.bigint "created_by_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["assignment_id"], name: "index_discussion_spaces_on_assignment_id"
+    t.index ["classroom_id"], name: "index_discussion_spaces_on_classroom_id"
+    t.index ["created_by_id"], name: "index_discussion_spaces_on_created_by_id"
+    t.index ["school_id", "space_type"], name: "index_discussion_spaces_on_school_id_and_space_type"
+    t.index ["school_id"], name: "index_discussion_spaces_on_school_id"
+    t.index ["space_type", "assignment_id"], name: "index_discussion_spaces_on_assignment_scope", unique: true, where: "(assignment_id IS NOT NULL)"
+    t.index ["space_type", "classroom_id"], name: "index_discussion_spaces_on_classroom_scope", unique: true, where: "(classroom_id IS NOT NULL)"
+    t.index ["space_type", "subject_id"], name: "index_discussion_spaces_on_subject_scope", unique: true, where: "(subject_id IS NOT NULL)"
+    t.index ["space_type"], name: "index_discussion_spaces_on_space_type"
+    t.index ["subject_id"], name: "index_discussion_spaces_on_subject_id"
+  end
+
+  create_table "discussion_threads", force: :cascade do |t|
+    t.bigint "discussion_space_id", null: false
+    t.bigint "creator_id", null: false
+    t.string "title", null: false
+    t.text "body", null: false
+    t.string "status", default: "active", null: false
+    t.boolean "pinned", default: false, null: false
+    t.boolean "locked", default: false, null: false
+    t.integer "posts_count", default: 0, null: false
+    t.datetime "last_post_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["creator_id"], name: "index_discussion_threads_on_creator_id"
+    t.index ["discussion_space_id", "last_post_at"], name: "idx_on_discussion_space_id_last_post_at_8a04856071"
+    t.index ["discussion_space_id", "pinned"], name: "index_discussion_threads_on_discussion_space_id_and_pinned"
+    t.index ["discussion_space_id", "updated_at"], name: "index_discussion_threads_on_discussion_space_id_and_updated_at"
+    t.index ["discussion_space_id"], name: "index_discussion_threads_on_discussion_space_id"
   end
 
   create_table "event_participants", force: :cascade do |t|
@@ -619,6 +680,16 @@ ActiveRecord::Schema[8.0].define(version: 2026_03_15_193000) do
   add_foreign_key "conversations", "messages", column: "last_message_id"
   add_foreign_key "conversations", "schools"
   add_foreign_key "conversations", "users", column: "created_by_id"
+  add_foreign_key "discussion_posts", "discussion_posts", column: "parent_post_id"
+  add_foreign_key "discussion_posts", "discussion_threads"
+  add_foreign_key "discussion_posts", "users", column: "author_id"
+  add_foreign_key "discussion_spaces", "assignments"
+  add_foreign_key "discussion_spaces", "classrooms"
+  add_foreign_key "discussion_spaces", "schools"
+  add_foreign_key "discussion_spaces", "subjects"
+  add_foreign_key "discussion_spaces", "users", column: "created_by_id"
+  add_foreign_key "discussion_threads", "discussion_spaces"
+  add_foreign_key "discussion_threads", "users", column: "creator_id"
   add_foreign_key "event_participants", "calendar_events"
   add_foreign_key "event_participants", "users"
   add_foreign_key "grades", "submissions"

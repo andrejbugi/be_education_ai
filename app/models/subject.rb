@@ -8,6 +8,7 @@ class Subject < ApplicationRecord
   has_many :announcements, dependent: :nullify
   has_many :attendance_records, dependent: :nullify
   has_many :ai_sessions, dependent: :nullify
+  has_many :discussion_spaces, dependent: :destroy
 
   validates :name, presence: true
 end

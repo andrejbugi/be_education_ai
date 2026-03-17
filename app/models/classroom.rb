@@ -13,6 +13,7 @@ class Classroom < ApplicationRecord
   has_many :announcements, dependent: :nullify
   has_many :attendance_records, dependent: :destroy
   has_many :student_performance_snapshots, dependent: :nullify
+  has_many :discussion_spaces, dependent: :destroy
 
   validates :name, presence: true
 end

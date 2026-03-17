@@ -14,6 +14,7 @@ class School < ApplicationRecord
   has_many :student_performance_snapshots, dependent: :destroy
   has_many :ai_sessions, dependent: :destroy
   has_many :conversations, dependent: :destroy
+  has_many :discussion_spaces, dependent: :destroy
 
   validates :name, presence: true
 end

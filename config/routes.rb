@@ -11,6 +11,21 @@ Rails.application.routes.draw do
 
       resources :schools, only: %i[index show]
       resource :profile, only: %i[show update], controller: "profile"
+      resources :discussion_spaces, only: %i[index show] do
+        resources :threads, only: %i[index create], controller: "discussion_threads"
+      end
+      resources :discussion_threads, only: :show do
+        resources :posts, only: %i[index create], controller: "discussion_posts"
+        post :lock, on: :member
+        post :unlock, on: :member
+        post :pin, on: :member
+        post :unpin, on: :member
+        post :archive, on: :member
+      end
+      resources :discussion_posts, only: [] do
+        post :hide, on: :member
+        post :unhide, on: :member
+      end
       resources :announcements, only: %i[index create show update] do
         post :publish, on: :member
         post :archive, on: :member
