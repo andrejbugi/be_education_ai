@@ -194,7 +194,7 @@ Returns:
 Not implemented yet:
 - redeemable rewards
 - reward catalog
-- XP history ledger
+- public XP history endpoint
 - badge expiration
 - manual teacher-awarded badges
 - school-configurable XP weights
@@ -206,6 +206,7 @@ Not implemented yet:
 
 Good next steps:
 - dedicated `GET /api/v1/student/progress`
+- dedicated `GET /api/v1/student/rewards` or XP history endpoint
 - teacher view for classroom progress summaries
 - notifications when a new badge is earned
 - configurable badge definitions in DB

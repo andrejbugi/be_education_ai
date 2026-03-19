@@ -14,6 +14,10 @@ class School < ApplicationRecord
   has_many :student_performance_snapshots, dependent: :destroy
   has_many :student_progress_profiles, dependent: :destroy
   has_many :student_badges, dependent: :destroy
+  has_many :daily_quiz_questions, dependent: :destroy
+  has_many :daily_quiz_answers, dependent: :destroy
+  has_many :learning_game_configs, dependent: :destroy
+  has_many :student_reward_events, dependent: :destroy
   has_many :ai_sessions, dependent: :destroy
   has_many :conversations, dependent: :destroy
   has_many :discussion_spaces, dependent: :destroy

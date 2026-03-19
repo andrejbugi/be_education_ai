@@ -293,6 +293,22 @@ def upsert_ai_message(ai_session:, sequence_number:, role:, message_type:, conte
   message
 end
 
+def upsert_daily_quiz_question(school:, quiz_date:, title:, body:, category:, correct_answer:, answer_options:, explanation:, difficulty: nil, answer_type: "single_choice", is_active: true, created_by: nil)
+  question = DailyQuizQuestion.find_or_initialize_by(school: school, quiz_date: quiz_date)
+  question.title = title
+  question.body = body
+  question.category = category
+  question.difficulty = difficulty
+  question.answer_type = answer_type
+  question.correct_answer = correct_answer
+  question.answer_options = answer_options
+  question.explanation = explanation
+  question.is_active = is_active
+  question.created_by = created_by
+  question.save!
+  question
+end
+
 def upsert_discussion_space(school:, space_type:, title:, description:, visibility:, created_by:, status: "active", assignment: nil, classroom: nil, subject: nil)
   space = DiscussionSpace.find_or_initialize_by(
     school: school,
@@ -1321,6 +1337,53 @@ School.includes(:classrooms, :subjects, :users).find_each do |school|
   )
 end
 
+daily_quiz_seed_date = Time.current.in_time_zone(QuizGames::FeatureWindow::DEFAULT_TIMEZONE).to_date
+
+[
+  {
+    quiz_date: daily_quiz_seed_date,
+    title: "Квиз на денот",
+    body: "Кој град е главен град на Македонија?",
+    category: "geography",
+    difficulty: "easy",
+    correct_answer: "Скопје",
+    answer_options: ["Битола", "Скопје", "Охрид", "Тетово"],
+    explanation: "Скопје е главен град на Македонија."
+  },
+  {
+    quiz_date: daily_quiz_seed_date + 1.day,
+    title: "Квиз на денот",
+    body: "Кое езеро се наоѓа на југозападот на Македонија и е едно од најстарите во Европа?",
+    category: "geography",
+    difficulty: "medium",
+    correct_answer: "Охридско Езеро",
+    answer_options: ["Дојранско Езеро", "Тиквешко Езеро", "Охридско Езеро", "Мавровско Езеро"],
+    explanation: "Охридското Езеро е едно од најстарите и најпознатите езера во Европа."
+  },
+  {
+    quiz_date: daily_quiz_seed_date + 2.days,
+    title: "Квиз на денот",
+    body: "Кој македонски револуционер е познат по изреката „Јас го разбирам светот како поле за културен натпревар меѓу народите“?",
+    category: "history",
+    difficulty: "medium",
+    correct_answer: "Гоце Делчев",
+    answer_options: ["Гоце Делчев", "Даме Груев", "Никола Карев", "Питу Гули"],
+    explanation: "Оваа позната мисла најчесто се поврзува со Гоце Делчев."
+  }
+].each do |quiz_attrs|
+  upsert_daily_quiz_question(
+    school: nil,
+    quiz_date: quiz_attrs[:quiz_date],
+    title: quiz_attrs[:title],
+    body: quiz_attrs[:body],
+    category: quiz_attrs[:category],
+    difficulty: quiz_attrs[:difficulty],
+    correct_answer: quiz_attrs[:correct_answer],
+    answer_options: quiz_attrs[:answer_options],
+    explanation: quiz_attrs[:explanation]
+  )
+end
+
 puts "Seed data prepared:"
 puts "- Schools: #{School.count}"
 puts "- Users: #{User.count}"
@@ -1346,6 +1409,7 @@ puts "- Teacher subjects: #{TeacherSubject.count}"
 puts "- Discussion spaces: #{DiscussionSpace.count}"
 puts "- Discussion threads: #{DiscussionThread.count}"
 puts "- Discussion posts: #{DiscussionPost.count}"
+puts "- Daily quiz questions: #{DailyQuizQuestion.count}"
 
 School.order(:id).each do |school|
   school_teacher_count = school.school_users

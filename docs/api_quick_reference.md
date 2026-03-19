@@ -74,5 +74,153 @@ Teacher submission detail notes:
 
 ## Student area
 - `GET /student/dashboard`
+- `GET /student/performance`
 - `GET /student/assignments`
 - `GET /student/assignments/:id`
+- `GET /student/daily_quiz`
+- `POST /student/daily_quiz/answer`
+- `GET /student/learning_games`
+
+Student area headers:
+- `Authorization: Bearer <jwt>`
+- `X-School-Id: <selected_school_id>`
+
+## Daily quiz
+
+### `GET /student/daily_quiz`
+Returns today's quiz state for the current student in the selected school.
+
+Example response before answering:
+
+```json
+{
+  "date": "2026-03-19",
+  "available_now": true,
+  "available_from": "00:00",
+  "available_until": "23:59",
+  "already_answered": false,
+  "question": {
+    "id": 12,
+    "title": "Квиз на денот",
+    "body": "Кој град е главен град на Македонија?",
+    "category": "geography",
+    "difficulty": null,
+    "answer_type": "single_choice",
+    "answer_options": ["Битола", "Скопје", "Охрид"]
+  },
+  "answer": null,
+  "reward": {
+    "correct_xp": 1
+  }
+}
+```
+
+Example response after answering:
+
+```json
+{
+  "date": "2026-03-19",
+  "available_now": true,
+  "available_from": "00:00",
+  "available_until": "23:59",
+  "already_answered": true,
+  "question": {
+    "id": 12,
+    "title": "Квиз на денот",
+    "body": "Кој град е главен град на Македонија?",
+    "category": "geography",
+    "difficulty": null,
+    "answer_type": "single_choice",
+    "answer_options": ["Битола", "Скопје", "Охрид"]
+  },
+  "answer": {
+    "selected_answer": "Скопје",
+    "answer_text": null,
+    "correct": true,
+    "xp_awarded": 1,
+    "explanation": "Скопје е главен град на Македонија.",
+    "answered_at": "2026-03-19T18:31:00.000Z"
+  },
+  "reward": {
+    "correct_xp": 1
+  }
+}
+```
+
+Notes:
+- daily quiz is available throughout the whole local school day
+- backend returns school-scoped or global quiz content for the current day
+- if no active question exists for today, `question` is `null`
+- once answered, FE should keep the screen read-only
+
+### `POST /student/daily_quiz/answer`
+Creates the student's answer for today's quiz.
+
+Example request:
+
+```json
+{
+  "daily_quiz_question_id": 12,
+  "selected_answer": "Скопје"
+}
+```
+
+Example success response:
+
+```json
+{
+  "correct": true,
+  "xp_awarded": 1,
+  "already_answered": true,
+  "explanation": "Скопје е главен град на Македонија.",
+  "answered_at": "2026-03-19T18:31:00.000Z"
+}
+```
+
+Behavior notes:
+- first successful submit returns `201 Created`
+- duplicate submit for the same day returns the existing result with `200 OK`
+- repeated requests do not create duplicate XP rewards
+- if there is no active quiz for today the endpoint returns `404`
+- validation problems return `422` with `{ "errors": [...] }`
+
+## Learning games
+
+### `GET /student/learning_games`
+Returns the current game catalog plus whether the feature is open now.
+
+Example response:
+
+```json
+{
+  "available_now": true,
+  "available_from": "18:00",
+  "available_until": "20:00",
+  "games": [
+    {
+      "game_key": "geometry_shapes",
+      "title": "Геометрија",
+      "description": "Препознај форми и агли.",
+      "icon_key": null,
+      "is_enabled": true,
+      "position": 1,
+      "metadata": {}
+    },
+    {
+      "game_key": "basic_math_speed",
+      "title": "Брза математика",
+      "description": "Решавај кратки математички задачи.",
+      "icon_key": null,
+      "is_enabled": true,
+      "position": 2,
+      "metadata": {}
+    }
+  ]
+}
+```
+
+Notes:
+- this endpoint is catalog/config only in v1
+- learning games use the configured time window and may return `available_now: false` outside it
+- school-specific config overrides global config by `game_key`
+- disabled games are not returned

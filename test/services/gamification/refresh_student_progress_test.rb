@@ -66,4 +66,28 @@ class Gamification::RefreshStudentProgressTest < ActiveSupport::TestCase
     assert_equal 5, result.profile.badges_count
     assert_equal %w[ai_explorer attendance_star first_completion high_achiever streak_3], result.profile.student_badges.order(:code).pluck(:code)
   end
+
+  test "refresh includes daily quiz rewards in xp totals and activity streaks" do
+    school = create_school
+    student = create_student(school: school)
+
+    StudentRewardEvent.create!(
+      school: school,
+      student: student,
+      source_type: StudentRewardEvent::SOURCE_DAILY_QUIZ,
+      source_id: 42,
+      awarded_on: Date.current,
+      xp_amount: 1,
+      metadata: {}
+    )
+
+    result = Gamification::RefreshStudentProgress.new(student: student, school: school).call
+
+    assert result.success?
+    assert_equal 1, result.profile.total_xp
+    assert_equal Date.current, result.profile.last_active_on
+    assert_equal 1, result.profile.current_streak
+    assert_equal 1, result.profile.metadata.dig("xp_breakdown", "daily_quiz")
+    assert_equal 1, result.profile.metadata.dig("rewards", "daily_quiz_events")
+  end
 end

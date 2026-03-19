@@ -7,7 +7,7 @@ This doc describes the current frontend-facing payloads for the gamification and
 Important:
 - there is no standalone gamification endpoint yet
 - FE receives progress data through existing student endpoints
-- "rewards" currently means earned badges only
+- rewards currently include badges plus server-tracked XP events such as `daily_quiz`
 - there is no redeemable store, inventory, or claim action yet
 - backend values should be treated as the source of truth
 
@@ -60,7 +60,9 @@ Example:
       "in_progress_assignments": 0,
       "grade_bonus": 60,
       "attendance": 15,
-      "ai_learning": 10
+      "ai_learning": 10,
+      "rewards": 1,
+      "daily_quiz": 1
     },
     "badges": [
       {
@@ -138,7 +140,9 @@ Example:
       "in_progress_assignments": 0,
       "grade_bonus": 60,
       "attendance": 15,
-      "ai_learning": 10
+      "ai_learning": 10,
+      "rewards": 1,
+      "daily_quiz": 1
     },
     "badges": [
       {
@@ -205,10 +209,14 @@ Fields:
 - `grade_bonus`
 - `attendance`
 - `ai_learning`
+- `rewards`
+- `daily_quiz`
 
 Important:
 - these values are informational totals
 - FE should not try to recompute them locally
+- `rewards` is the total XP coming from reward events
+- `daily_quiz` is the currently tracked reward-event subtype exposed in v1
 
 ## Badge object
 

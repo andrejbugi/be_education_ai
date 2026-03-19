@@ -387,7 +387,9 @@ Notes:
 `GET /student/dashboard` now includes:
 - `announcements`
 - `performance_snapshot`
+- `progress`
 - `ai_resume`
+- `recent_activity`
 
 ### Teacher dashboard
 `GET /teacher/dashboard` now includes:

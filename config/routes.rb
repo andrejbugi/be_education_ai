@@ -84,6 +84,10 @@ Rails.application.routes.draw do
       namespace :student do
         get "dashboard", to: "dashboards#show"
         get "performance", to: "performance#show"
+        resource :daily_quiz, only: :show, controller: "daily_quizzes" do
+          post :answer, on: :collection
+        end
+        resources :learning_games, only: :index
         resources :assignments, only: %i[index show]
       end
     end

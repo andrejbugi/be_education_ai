@@ -244,6 +244,35 @@ module ApiTestFactory
       graded_at: Time.current
     )
   end
+
+  def create_daily_quiz_question(school: nil, quiz_date: Date.current, title: "Квиз на денот", body: "Кој град е главен град на Македонија?", category: "geography", answer_type: "single_choice", correct_answer: "Скопје", answer_options: ["Битола", "Скопје", "Охрид"], explanation: "Скопје е главен град на Македонија.", is_active: true, created_by: nil)
+    DailyQuizQuestion.create!(
+      school: school,
+      quiz_date: quiz_date,
+      title: title,
+      body: body,
+      category: category,
+      answer_type: answer_type,
+      correct_answer: correct_answer,
+      answer_options: answer_options,
+      explanation: explanation,
+      is_active: is_active,
+      created_by: created_by
+    )
+  end
+
+  def create_learning_game_config(school: nil, game_key:, title:, description: "Опис", icon_key: nil, is_enabled: true, position: 0, metadata: {})
+    LearningGameConfig.create!(
+      school: school,
+      game_key: game_key,
+      title: title,
+      description: description,
+      icon_key: icon_key,
+      is_enabled: is_enabled,
+      position: position,
+      metadata: metadata
+    )
+  end
 end
 
 class ActionDispatch::IntegrationTest

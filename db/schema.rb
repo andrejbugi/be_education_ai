@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_03_17_203000) do
+ActiveRecord::Schema[8.0].define(version: 2026_03_19_100000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -292,6 +292,47 @@ ActiveRecord::Schema[8.0].define(version: 2026_03_17_203000) do
     t.index ["school_id"], name: "index_conversations_on_school_id"
   end
 
+  create_table "daily_quiz_answers", force: :cascade do |t|
+    t.bigint "school_id", null: false
+    t.bigint "student_id", null: false
+    t.bigint "daily_quiz_question_id", null: false
+    t.date "quiz_date", null: false
+    t.text "selected_answer"
+    t.text "answer_text"
+    t.boolean "is_correct", default: false, null: false
+    t.datetime "answered_at", null: false
+    t.integer "xp_awarded", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["daily_quiz_question_id", "answered_at"], name: "idx_on_daily_quiz_question_id_answered_at_86b03cd471"
+    t.index ["daily_quiz_question_id"], name: "index_daily_quiz_answers_on_daily_quiz_question_id"
+    t.index ["school_id", "student_id", "quiz_date"], name: "idx_daily_quiz_answers_once_per_day", unique: true
+    t.index ["school_id"], name: "index_daily_quiz_answers_on_school_id"
+    t.index ["student_id"], name: "index_daily_quiz_answers_on_student_id"
+  end
+
+  create_table "daily_quiz_questions", force: :cascade do |t|
+    t.bigint "school_id"
+    t.date "quiz_date", null: false
+    t.string "title", null: false
+    t.text "body", null: false
+    t.string "category", null: false
+    t.string "difficulty"
+    t.string "answer_type", default: "single_choice", null: false
+    t.text "correct_answer", null: false
+    t.jsonb "answer_options"
+    t.text "explanation"
+    t.boolean "is_active", default: true, null: false
+    t.bigint "created_by_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index "COALESCE(school_id, (0)::bigint), quiz_date", name: "idx_daily_quiz_questions_unique_active_scope", unique: true, where: "(is_active = true)"
+    t.index ["created_by_id"], name: "index_daily_quiz_questions_on_created_by_id"
+    t.index ["quiz_date", "is_active"], name: "index_daily_quiz_questions_on_quiz_date_and_is_active"
+    t.index ["school_id", "quiz_date"], name: "index_daily_quiz_questions_on_school_id_and_quiz_date"
+    t.index ["school_id"], name: "index_daily_quiz_questions_on_school_id"
+  end
+
   create_table "discussion_posts", force: :cascade do |t|
     t.bigint "discussion_thread_id", null: false
     t.bigint "author_id", null: false
@@ -391,6 +432,22 @@ ActiveRecord::Schema[8.0].define(version: 2026_03_17_203000) do
     t.index ["classroom_id"], name: "index_homeroom_assignments_on_classroom_id_active_unique", unique: true, where: "(active = true)"
     t.index ["school_id"], name: "index_homeroom_assignments_on_school_id"
     t.index ["teacher_id"], name: "index_homeroom_assignments_on_teacher_id"
+  end
+
+  create_table "learning_game_configs", force: :cascade do |t|
+    t.bigint "school_id"
+    t.string "game_key", null: false
+    t.string "title", null: false
+    t.text "description"
+    t.string "icon_key"
+    t.boolean "is_enabled", default: true, null: false
+    t.integer "position", default: 0, null: false
+    t.jsonb "metadata", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index "COALESCE(school_id, (0)::bigint), game_key", name: "idx_learning_game_configs_unique_scope_key", unique: true
+    t.index ["school_id", "position"], name: "index_learning_game_configs_on_school_id_and_position"
+    t.index ["school_id"], name: "index_learning_game_configs_on_school_id"
   end
 
   create_table "message_attachments", force: :cascade do |t|
@@ -498,6 +555,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_03_17_203000) do
     t.boolean "active", default: true, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.jsonb "settings", default: {}, null: false
     t.index ["code"], name: "index_schools_on_code", unique: true
   end
 
@@ -578,6 +636,22 @@ ActiveRecord::Schema[8.0].define(version: 2026_03_17_203000) do
     t.index ["school_id", "student_id"], name: "index_student_progress_profiles_on_school_id_and_student_id", unique: true
     t.index ["school_id"], name: "index_student_progress_profiles_on_school_id"
     t.index ["student_id"], name: "index_student_progress_profiles_on_student_id"
+  end
+
+  create_table "student_reward_events", force: :cascade do |t|
+    t.bigint "school_id", null: false
+    t.bigint "student_id", null: false
+    t.string "source_type", null: false
+    t.bigint "source_id", null: false
+    t.date "awarded_on", null: false
+    t.integer "xp_amount", default: 0, null: false
+    t.jsonb "metadata", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["school_id", "student_id", "source_type", "source_id", "awarded_on"], name: "idx_student_reward_events_idempotency", unique: true
+    t.index ["school_id"], name: "index_student_reward_events_on_school_id"
+    t.index ["student_id", "awarded_on"], name: "index_student_reward_events_on_student_id_and_awarded_on"
+    t.index ["student_id"], name: "index_student_reward_events_on_student_id"
   end
 
   create_table "subjects", force: :cascade do |t|
@@ -720,6 +794,11 @@ ActiveRecord::Schema[8.0].define(version: 2026_03_17_203000) do
   add_foreign_key "conversations", "messages", column: "last_message_id"
   add_foreign_key "conversations", "schools"
   add_foreign_key "conversations", "users", column: "created_by_id"
+  add_foreign_key "daily_quiz_answers", "daily_quiz_questions"
+  add_foreign_key "daily_quiz_answers", "schools"
+  add_foreign_key "daily_quiz_answers", "users", column: "student_id"
+  add_foreign_key "daily_quiz_questions", "schools"
+  add_foreign_key "daily_quiz_questions", "users", column: "created_by_id"
   add_foreign_key "discussion_posts", "discussion_posts", column: "parent_post_id"
   add_foreign_key "discussion_posts", "discussion_threads"
   add_foreign_key "discussion_posts", "users", column: "author_id"
@@ -737,6 +816,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_03_17_203000) do
   add_foreign_key "homeroom_assignments", "classrooms"
   add_foreign_key "homeroom_assignments", "schools"
   add_foreign_key "homeroom_assignments", "users", column: "teacher_id"
+  add_foreign_key "learning_game_configs", "schools"
   add_foreign_key "message_attachments", "messages"
   add_foreign_key "message_deliveries", "messages"
   add_foreign_key "message_deliveries", "users"
@@ -761,6 +841,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_03_17_203000) do
   add_foreign_key "student_profiles", "users"
   add_foreign_key "student_progress_profiles", "schools"
   add_foreign_key "student_progress_profiles", "users", column: "student_id"
+  add_foreign_key "student_reward_events", "schools"
+  add_foreign_key "student_reward_events", "users", column: "student_id"
   add_foreign_key "subjects", "schools"
   add_foreign_key "submission_step_answers", "assignment_steps"
   add_foreign_key "submission_step_answers", "submissions"

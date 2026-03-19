@@ -78,6 +78,7 @@ module Gamification
       submissions = school_scoped_submissions
       attendance_records = student.attendance_records.where(school_id: school.id)
       ai_sessions = student.ai_sessions.where(school_id: school.id)
+      reward_events = student.student_reward_events.where(school_id: school.id)
 
       completed_submissions = submissions.select { |submission| submission.submitted? || submission.reviewed? || submission.late? }
       graded_submissions = submissions.filter_map do |submission|
@@ -94,9 +95,16 @@ module Gamification
       grade_bonus_xp = graded_submissions.sum { |(_submission, grade)| grade_bonus_for(grade) }
       attendance_xp = (present_count * 3) + (late_count * 2) + excused_count
       ai_xp = (ai_sessions.count * 5) + (ai_sessions.completed.count * 5)
-      total_xp = (completed_submissions.count * 30) + (submissions.in_progress.count * 10) + grade_bonus_xp + attendance_xp + ai_xp
+      reward_xp = reward_events.sum(:xp_amount)
+      daily_quiz_xp = reward_events.where(source_type: StudentRewardEvent::SOURCE_DAILY_QUIZ).sum(:xp_amount)
+      total_xp = (completed_submissions.count * 30) + (submissions.in_progress.count * 10) + grade_bonus_xp + attendance_xp + ai_xp + reward_xp
 
-      active_dates = collect_active_dates(submissions: submissions, attendance_records: attendance_records, ai_sessions: ai_sessions)
+      active_dates = collect_active_dates(
+        submissions: submissions,
+        attendance_records: attendance_records,
+        ai_sessions: ai_sessions,
+        reward_events: reward_events
+      )
       current_streak, longest_streak, last_active_on = streaks_for(active_dates)
       current_level = [(total_xp / StudentProgressProfile::LEVEL_XP_STEP) + 1, 1].max
 
@@ -118,7 +126,9 @@ module Gamification
             in_progress_assignments: submissions.in_progress.count * 10,
             grade_bonus: grade_bonus_xp,
             attendance: attendance_xp,
-            ai_learning: ai_xp
+            ai_learning: ai_xp,
+            rewards: reward_xp,
+            daily_quiz: daily_quiz_xp
           },
           attendance_breakdown: {
             present: present_count,
@@ -130,6 +140,10 @@ module Gamification
             total: ai_sessions.count,
             completed: ai_sessions.completed.count,
             active: ai_sessions.active.count
+          },
+          rewards: {
+            total_events: reward_events.count,
+            daily_quiz_events: reward_events.where(source_type: StudentRewardEvent::SOURCE_DAILY_QUIZ).count
           }
         }
       }
@@ -170,7 +184,7 @@ module Gamification
       end
     end
 
-    def collect_active_dates(submissions:, attendance_records:, ai_sessions:)
+    def collect_active_dates(submissions:, attendance_records:, ai_sessions:, reward_events:)
       dates = []
 
       submissions.find_each do |submission|
@@ -186,6 +200,10 @@ module Gamification
       ai_sessions.find_each do |session|
         dates << session.started_at&.to_date
         dates << session.last_activity_at&.to_date
+      end
+
+      reward_events.find_each do |event|
+        dates << event.awarded_on
       end
 
       dates.compact.uniq.sort

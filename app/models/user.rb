@@ -30,7 +30,10 @@ class User < ApplicationRecord
   has_many :student_performance_snapshots, foreign_key: :student_id, dependent: :destroy
   has_many :student_progress_profiles, foreign_key: :student_id, dependent: :destroy
   has_many :student_badges, foreign_key: :student_id, dependent: :destroy
+  has_many :daily_quiz_answers, foreign_key: :student_id, dependent: :destroy
+  has_many :student_reward_events, foreign_key: :student_id, dependent: :destroy
   has_many :ai_sessions, dependent: :destroy
+  has_many :created_daily_quiz_questions, class_name: "DailyQuizQuestion", foreign_key: :created_by_id, dependent: :nullify
   has_many :created_conversations, class_name: "Conversation", foreign_key: :created_by_id
   has_many :conversation_participants, dependent: :destroy
   has_many :conversations, through: :conversation_participants
