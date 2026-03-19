@@ -216,12 +216,22 @@ def upsert_activity_log(user:, action:, trackable:, occurred_at:, metadata: {})
 end
 
 def upsert_homeroom_assignment(school:, classroom:, teacher:, starts_on:, active: true, ends_on: nil)
-  assignment = HomeroomAssignment.find_or_initialize_by(
-    school: school,
-    classroom: classroom,
-    teacher: teacher,
-    starts_on: starts_on
-  )
+  assignment =
+    if active
+      classroom.homeroom_assignments.active.first || classroom.homeroom_assignments.new
+    else
+      HomeroomAssignment.find_or_initialize_by(
+        school: school,
+        classroom: classroom,
+        teacher: teacher,
+        starts_on: starts_on
+      )
+    end
+
+  assignment.school = school
+  assignment.classroom = classroom
+  assignment.teacher = teacher
+  assignment.starts_on = starts_on
   assignment.active = active
   assignment.ends_on = ends_on
   assignment.save!
@@ -281,6 +291,98 @@ def upsert_ai_message(ai_session:, sequence_number:, role:, message_type:, conte
   message.metadata = metadata
   message.save!
   message
+end
+
+def upsert_discussion_space(school:, space_type:, title:, description:, visibility:, created_by:, status: "active", assignment: nil, classroom: nil, subject: nil)
+  space = DiscussionSpace.find_or_initialize_by(
+    school: school,
+    space_type: space_type,
+    assignment: assignment,
+    classroom: classroom,
+    subject: subject
+  )
+  space.title = title
+  space.description = description
+  space.status = status
+  space.visibility = visibility
+  space.created_by = created_by
+  space.save!
+  space
+end
+
+def upsert_discussion_thread(space:, creator:, title:, body:, created_at:, status: "active", pinned: false, locked: false)
+  thread = DiscussionThread.find_or_initialize_by(discussion_space: space, title: title)
+  thread.creator = creator
+  thread.body = body
+  thread.status = status
+  thread.pinned = pinned
+  thread.locked = locked
+  thread.last_post_at ||= created_at
+  thread.save!
+  thread.update_columns(created_at: created_at, updated_at: created_at) # rubocop:disable Rails/SkipsModelValidations
+  thread
+end
+
+def upsert_discussion_post(thread:, author:, body:, created_at:, parent_post: nil, status: "visible", updated_at: nil, edited_at: nil, deleted_at: nil)
+  post = DiscussionPost.find_or_initialize_by(
+    discussion_thread: thread,
+    author: author,
+    body: body,
+    parent_post: parent_post
+  )
+  post.status = status
+  post.edited_at = edited_at
+  post.deleted_at = deleted_at
+  post.save!
+  post.update_columns( # rubocop:disable Rails/SkipsModelValidations
+    status: status,
+    created_at: created_at,
+    updated_at: updated_at || edited_at || created_at,
+    edited_at: edited_at,
+    deleted_at: deleted_at
+  )
+  post
+end
+
+def refresh_discussion_thread!(thread)
+  DiscussionThread.reset_counters(thread.id, :discussion_posts)
+  latest_post_at = thread.discussion_posts.maximum(:created_at) || thread.created_at
+  latest_activity_at = [thread.created_at, thread.discussion_posts.maximum(:updated_at), latest_post_at].compact.max
+  thread.update_columns(last_post_at: latest_post_at, updated_at: latest_activity_at) # rubocop:disable Rails/SkipsModelValidations
+  thread.reload
+end
+
+def seed_discussion_thread(space:, creator:, title:, body:, created_at:, status: "active", pinned: false, locked: false, posts: [])
+  thread = upsert_discussion_thread(
+    space: space,
+    creator: creator,
+    title: title,
+    body: body,
+    created_at: created_at,
+    status: status,
+    pinned: pinned,
+    locked: locked
+  )
+
+  post_registry = {}
+
+  posts.each do |post_attrs|
+    parent_post = post_attrs[:parent_key] ? post_registry.fetch(post_attrs[:parent_key]) : nil
+    post = upsert_discussion_post(
+      thread: thread,
+      author: post_attrs.fetch(:author),
+      body: post_attrs.fetch(:body),
+      created_at: post_attrs.fetch(:created_at),
+      parent_post: parent_post,
+      status: post_attrs.fetch(:status, "visible"),
+      updated_at: post_attrs[:updated_at],
+      edited_at: post_attrs[:edited_at],
+      deleted_at: post_attrs[:deleted_at]
+    )
+    post_registry[post_attrs[:key]] = post if post_attrs[:key].present?
+  end
+
+  refresh_discussion_thread!(thread)
 end
 
 FIRST_NAMES = %w[
@@ -425,7 +527,7 @@ subject_records = {}
 
 student_index = 0
 
-SCHOOL_BLUEPRINTS.each do |blueprint|
+SCHOOL_BLUEPRINTS.each_with_index do |blueprint, school_offset|
   school = School.find_or_create_by!(code: blueprint[:code]) do |record|
     record.name = blueprint[:name]
     record.city = blueprint[:city]
@@ -824,6 +926,273 @@ SCHOOL_BLUEPRINTS.each do |blueprint|
       payload: { calendar_event_id: next_school_event.id }
     )
   end
+
+  lead_teacher = teachers.first
+  primary_classroom = classrooms.first
+  secondary_classroom = classrooms.second || primary_classroom
+  primary_subject = subjects.first
+  subject_teacher = primary_subject.teachers.order(:id).first || lead_teacher
+  classroom_teacher = primary_classroom.teachers.order(:id).first || lead_teacher
+  primary_students = primary_classroom.students.order(:id).limit(3).to_a
+  secondary_students = secondary_classroom.students.order(:id).limit(2).to_a
+  student_a = primary_students[0]
+  student_b = primary_students[1] || student_a
+  student_c = primary_students[2] || student_b
+  secondary_student = secondary_students[0] || student_b
+
+  published_assignments = Assignment.for_school(school.id)
+                                    .includes(:classroom, :subject, :teacher)
+                                    .where(status: Assignment.statuses[:published])
+                                    .order(:due_at, :id)
+  featured_assignment = published_assignments.find_by(classroom: primary_classroom, subject: primary_subject) || published_assignments.first
+  assignment_teacher = featured_assignment&.teacher || subject_teacher
+
+  forum_base_time = seed_now - 5.days + school_offset.days
+
+  classroom_space = upsert_discussion_space(
+    school: school,
+    space_type: "classroom",
+    classroom: primary_classroom,
+    title: "#{primary_classroom.name} - Класен форум",
+    description: "Прашања, потсетници и договори за учениците и наставниците од #{primary_classroom.name}.",
+    status: "active",
+    visibility: "students_and_teachers",
+    created_by: classroom_teacher
+  )
+
+  subject_space = upsert_discussion_space(
+    school: school,
+    space_type: "subject",
+    subject: primary_subject,
+    title: "#{primary_subject.name} - Форум за помош",
+    description: "Место за прашања, вежбање и кратки појаснувања по #{primary_subject.name.downcase}.",
+    status: "active",
+    visibility: "students_and_teachers",
+    created_by: subject_teacher
+  )
+
+  school_space = upsert_discussion_space(
+    school: school,
+    space_type: "school",
+    title: "#{school.name} - Училишна табла",
+    description: "Официјални училишни теми и важни насоки. Просторот е за читање и следење известувања.",
+    status: "active",
+    visibility: "read_only",
+    created_by: lead_teacher
+  )
+
+  assignment_space =
+    if featured_assignment
+      upsert_discussion_space(
+        school: school,
+        space_type: "assignment",
+        assignment: featured_assignment,
+        title: "Дискусија за #{featured_assignment.title}",
+        description: "Прашања и одговори поврзани со задачата, рокот и очекуваните одговори.",
+        status: "active",
+        visibility: "students_and_teachers",
+        created_by: assignment_teacher
+      )
+    end
+
+  seed_discussion_thread(
+    space: classroom_space,
+    creator: classroom_teacher,
+    title: "Добредојдовте во форумот на #{primary_classroom.name}",
+    body: "Ова е главната тема за организација, кратки потсетници и општи прашања.",
+    created_at: forum_base_time + 1.hour,
+    pinned: true,
+    posts: [
+      {
+        key: :welcome_teacher_post,
+        author: classroom_teacher,
+        body: "Тука можете да поставувате прашања за распоред, задачи и подготовка за час.",
+        created_at: forum_base_time + 2.hours
+      },
+      {
+        key: :welcome_student_post,
+        author: student_a,
+        body: "Дали овде ќе споделуваме и потсетници за тоа што да донесеме на час?",
+        created_at: forum_base_time + 3.hours
+      },
+      {
+        author: classroom_teacher,
+        body: "Да, ова е вистинското место и за такви организациски прашања.",
+        parent_key: :welcome_student_post,
+        created_at: forum_base_time + 4.hours
+      },
+      {
+        author: student_b,
+        body: "Одлично, така ќе ни биде полесно сите да следиме.",
+        parent_key: :welcome_student_post,
+        created_at: forum_base_time + 5.hours
+      }
+    ]
+  )
+
+  seed_discussion_thread(
+    space: classroom_space,
+    creator: student_a,
+    title: "Прашања за домашната оваа недела",
+    body: "Ако нешто не е јасно околу задачите, да собереме сè на едно место.",
+    created_at: forum_base_time + 8.hours,
+    posts: [
+      {
+        key: :homework_question,
+        author: student_a,
+        body: "За домашната по математика, дали треба и кратко објаснување покрај решението?",
+        created_at: forum_base_time + 9.hours
+      },
+      {
+        key: :homework_answer,
+        author: subject_teacher,
+        body: "Да, додадете по една реченица за секој чекор за да се види начинот на размислување.",
+        created_at: forum_base_time + 10.hours,
+        edited_at: forum_base_time + 10.hours + 15.minutes
+      },
+      {
+        author: student_c,
+        body: "Фала, ова ми беше важно за да знам колку детално да пишувам.",
+        parent_key: :homework_answer,
+        created_at: forum_base_time + 11.hours
+      }
+    ]
+  )
+
+  seed_discussion_thread(
+    space: classroom_space,
+    creator: classroom_teacher,
+    title: "Информација за утрешниот час",
+    body: "Во оваа тема се собрани само важните насоки за следниот час.",
+    created_at: forum_base_time + 14.hours,
+    locked: true,
+    posts: [
+      {
+        key: :schedule_note,
+        author: classroom_teacher,
+        body: "Утре носете тетратка, линијар и материјалите од последната лекција.",
+        created_at: forum_base_time + 15.hours
+      },
+      {
+        author: secondary_student,
+        body: "Потврдувам, ќе ги понесам сите материјали.",
+        created_at: forum_base_time + 16.hours
+      }
+    ]
+  )
+
+  seed_discussion_thread(
+    space: subject_space,
+    creator: student_b,
+    title: "Подготовка за тест по #{primary_subject.name}",
+    body: "Ајде тука да собереме прашања и корисни совети за повторување.",
+    created_at: forum_base_time + 20.hours,
+    posts: [
+      {
+        key: :test_question,
+        author: student_b,
+        body: "Кои три теми се најважни за повторување пред тестот?",
+        created_at: forum_base_time + 21.hours
+      },
+      {
+        key: :test_answer,
+        author: subject_teacher,
+        body: "Фокусирајте се на основните поими, решавање пример и објаснување со свои зборови.",
+        created_at: forum_base_time + 22.hours,
+        edited_at: forum_base_time + 22.hours + 20.minutes
+      },
+      {
+        author: student_a,
+        body: "Ова многу помага, ќе почнам од примерите од последниот час.",
+        parent_key: :test_answer,
+        created_at: forum_base_time + 23.hours
+      },
+      {
+        author: student_c,
+        body: "Јас ништо не разбрав и не ми се допаѓа оваа тема.",
+        status: "hidden",
+        created_at: forum_base_time + 24.hours
+      }
+    ]
+  )
+
+  seed_discussion_thread(
+    space: subject_space,
+    creator: subject_teacher,
+    title: "Корисни извори и линкови",
+    body: "Овде ќе чуваме кратка листа со материјали за вежбање.",
+    created_at: forum_base_time + 28.hours,
+    pinned: true,
+    posts: [
+      {
+        author: subject_teacher,
+        body: "Прво проверете ги материјалите од задачите, а потоа и белешките од час.",
+        created_at: forum_base_time + 29.hours
+      }
+    ]
+  )
+
+  seed_discussion_thread(
+    space: school_space,
+    creator: lead_teacher,
+    title: "Неделни активности во училиштето",
+    body: "Оваа тема ги собира главните насоки за тековната недела.",
+    created_at: forum_base_time + 32.hours,
+    pinned: true,
+    posts: [
+      {
+        author: lead_teacher,
+        body: "Следете ги календарските настани и известувањата за училишните активности.",
+        created_at: forum_base_time + 33.hours
+      }
+    ]
+  )
+
+  if assignment_space
+    seed_discussion_thread(
+      space: assignment_space,
+      creator: student_a,
+      title: "Прашања за #{featured_assignment.title}",
+      body: "Да ги собереме тука сите дилеми поврзани со задачата за полесно следење.",
+      created_at: forum_base_time + 36.hours,
+      posts: [
+        {
+          key: :assignment_question,
+          author: student_a,
+          body: "Дали за вториот чекор треба да наведеме и пример или само објаснување?",
+          created_at: forum_base_time + 37.hours
+        },
+        {
+          key: :assignment_answer,
+          author: assignment_teacher,
+          body: "Додадете и краток пример, затоа што така полесно се гледа дали е разбрана постапката.",
+          created_at: forum_base_time + 38.hours
+        },
+        {
+          author: student_b,
+          body: "Одлично, тогаш ќе вклучам пример со две реченици објаснување.",
+          parent_key: :assignment_answer,
+          created_at: forum_base_time + 39.hours
+        }
+      ]
+    )
+
+    seed_discussion_thread(
+      space: assignment_space,
+      creator: assignment_teacher,
+      title: "Совети пред предавање",
+      body: "Неколку кратки насоки за полесна и појасна предавачка верзија.",
+      created_at: forum_base_time + 42.hours,
+      pinned: true,
+      posts: [
+        {
+          author: assignment_teacher,
+          body: "Проверете дали секој чекор има јасен наслов и дали одговорите се напишани со целосни реченици.",
+          created_at: forum_base_time + 43.hours
+        }
+      ]
+    )
+  end
 end
 
 TeacherClassroom.includes(:classroom, :user).where(homeroom: true).find_each do |teacher_classroom|
@@ -974,6 +1343,9 @@ puts "- School users: #{SchoolUser.count}"
 puts "- Teacher classrooms: #{TeacherClassroom.count}"
 puts "- Classroom users (student enrollments): #{ClassroomUser.count}"
 puts "- Teacher subjects: #{TeacherSubject.count}"
+puts "- Discussion spaces: #{DiscussionSpace.count}"
+puts "- Discussion threads: #{DiscussionThread.count}"
+puts "- Discussion posts: #{DiscussionPost.count}"
 
 School.order(:id).each do |school|
   school_teacher_count = school.school_users
