@@ -53,6 +53,7 @@ module DiscussionSerialization
       last_post_at: thread.last_post_at,
       created_at: thread.created_at,
       updated_at: thread.updated_at,
+      attachments: serialize_discussion_uploads(thread.uploads),
       creator: {
         id: thread.creator_id,
         full_name: thread.creator.full_name,
@@ -90,6 +91,7 @@ module DiscussionSerialization
       deleted_at: post.deleted_at,
       created_at: post.created_at,
       updated_at: post.updated_at,
+      attachments: serialize_discussion_uploads(post.uploads),
       replies_count: post.replies.visible.count
     }
   end
@@ -99,5 +101,26 @@ module DiscussionSerialization
     return "teacher" if user.has_role?("teacher")
 
     "student"
+  end
+
+  def serialize_discussion_uploads(uploads)
+    uploads.map do |upload|
+      {
+        id: upload.id,
+        attachment_type: discussion_attachment_type(upload.blob.content_type),
+        file_name: upload.blob.filename.to_s,
+        content_type: upload.blob.content_type,
+        file_size: upload.blob.byte_size,
+        file_url: rails_blob_url(upload, host: request.base_url),
+        created_at: upload.created_at
+      }
+    end
+  end
+
+  def discussion_attachment_type(content_type)
+    return "image" if content_type.to_s.start_with?("image/")
+    return "pdf" if content_type == "application/pdf"
+
+    "file"
   end
 end

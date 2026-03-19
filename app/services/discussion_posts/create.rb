@@ -14,12 +14,16 @@ module DiscussionPosts
       post = nil
 
       DiscussionPost.transaction do
-        post = thread.discussion_posts.create!(
+        post = thread.discussion_posts.new(
           author: author,
-          body: params[:body],
+          body: normalized_body,
           parent_post_id: params[:parent_post_id],
           status: "visible"
         )
+        uploaded_files.each do |uploaded_file|
+          post.uploads.attach(uploaded_file)
+        end
+        post.save!
 
         thread.update!(last_post_at: post.created_at)
       end
@@ -32,6 +36,14 @@ module DiscussionPosts
     private
 
     attr_reader :thread, :author, :params
+
+    def uploaded_files
+      Array(params[:files]).compact
+    end
+
+    def normalized_body
+      params[:body].presence || ""
+    end
 
     def policy
       @policy ||= DiscussionThreadPolicy.new(author, thread)

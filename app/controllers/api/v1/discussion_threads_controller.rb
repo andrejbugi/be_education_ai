@@ -9,7 +9,11 @@ module Api
       def index
         return render_forbidden unless DiscussionSpacePolicy.new(current_user, @discussion_space).show?
 
-        threads = @discussion_space.discussion_threads.includes(:creator, discussion_space: %i[school assignment classroom subject])
+        threads = @discussion_space.discussion_threads.includes(
+          :creator,
+          { uploads_attachments: :blob },
+          discussion_space: %i[school assignment classroom subject]
+        )
         threads = threads.where(status: params[:status]) if params[:status].present?
         threads = threads.active unless params[:status].present?
         render json: threads.ordered_for_space.map { |thread| serialize_discussion_thread(thread) }
@@ -68,16 +72,24 @@ module Api
       end
 
       def set_discussion_thread
-        @discussion_thread = DiscussionThread.includes(:creator, discussion_space: %i[school assignment classroom subject]).find_by(id: params[:id])
+        @discussion_thread = DiscussionThread.includes(
+          :creator,
+          { uploads_attachments: :blob },
+          discussion_space: %i[school assignment classroom subject]
+        ).find_by(id: params[:id])
         render_not_found unless @discussion_thread
       end
 
       def thread_params
-        params.permit(:title, :body)
+        params.permit(:title, :body, files: [])
       end
 
       def reload_thread(id)
-        DiscussionThread.includes(:creator, discussion_space: %i[school assignment classroom subject]).find(id)
+        DiscussionThread.includes(
+          :creator,
+          { uploads_attachments: :blob },
+          discussion_space: %i[school assignment classroom subject]
+        ).find(id)
       end
 
       def moderate_thread(attributes)

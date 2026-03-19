@@ -79,6 +79,7 @@ The create-message endpoint now returns both stored messages:
 - `assistant_message` is generated only for student question messages.
 - `GET /api/v1/ai_sessions/:id` still returns the full ordered message history.
 - The backend currently uses a mock tutor provider by default.
+- To use the real OpenAI provider, configure the backend environment as documented in [ai_provider_setup.md](/home/andrejbugi/projects/be_education_ai/docs/ai_provider_setup.md).
 - If `assignment_step_id` is missing, the backend tries to infer the active step from the submission state.
 - Students are limited to 3 AI question messages per assignment step.
 - If the limit is reached, `POST /api/v1/ai_sessions/:id/messages` returns `429` with `code: "step_question_limit_reached"`.

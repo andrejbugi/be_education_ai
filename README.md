@@ -38,6 +38,39 @@ Detailed guide with request/response examples:
 - [frontend_assignment_submission_checks_guide.md](/home/andrejbugi/projects/be_education_ai/docs/frontend_assignment_submission_checks_guide.md)
 - [schools_frontend_guide.md](/home/andrejbugi/projects/be_education_ai/docs/schools_frontend_guide.md)
 - [seeded_school_data_summary.md](/home/andrejbugi/projects/be_education_ai/docs/seeded_school_data_summary.md)
+- [ai_provider_setup.md](/home/andrejbugi/projects/be_education_ai/docs/ai_provider_setup.md)
+
+## AI Provider Setup
+
+The AI tutor uses the mock provider by default.
+
+To switch the backend to OpenAI, set these environment variables before starting Rails:
+
+```bash
+export AI_PROVIDER=openai
+export OPENAI_API_KEY=your_base64_encoded_openai_api_key
+export OPENAI_API_KEY_BASE64=true
+export OPENAI_MODEL=gpt-4.1-mini
+```
+
+The implementation reads those values directly from `ENV` in:
+- [open_ai_client.rb](/home/andrejbugi/projects/be_education_ai/app/services/ai_providers/open_ai_client.rb)
+- [client_factory.rb](/home/andrejbugi/projects/be_education_ai/app/services/ai_providers/client_factory.rb)
+
+Recommended local approach:
+- store them in an untracked `.env.development.local`
+- load them manually before booting Rails
+- if your key is already plain text, omit `OPENAI_API_KEY_BASE64`
+
+```bash
+set -a
+source .env.development.local
+set +a
+bin/rails server
+```
+
+Full step-by-step guide:
+- [ai_provider_setup.md](/home/andrejbugi/projects/be_education_ai/docs/ai_provider_setup.md)
 
 
 ## Redis

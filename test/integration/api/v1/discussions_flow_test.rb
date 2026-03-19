@@ -40,7 +40,10 @@ class Api::V1::DiscussionsFlowTest < ActionDispatch::IntegrationTest
 
     post "/api/v1/discussion_spaces/#{space_id}/threads", params: {
       title: "Прашања за домашната",
-      body: "Дали треба да ги решиме сите задачи?"
+      files: [
+        uploaded_test_file(filename: "task-notes.pdf", content_type: "application/pdf", content: "Task notes"),
+        uploaded_test_file(filename: "draft-plan.txt", content_type: "text/plain", content: "Draft plan")
+      ]
     }, headers: student_headers
 
     assert_response :created
@@ -50,21 +53,29 @@ class Api::V1::DiscussionsFlowTest < ActionDispatch::IntegrationTest
     assert_equal student.id, thread_payload.dig("creator", "id")
     assert_equal "student", thread_payload.dig("creator", "role")
     assert_equal true, thread_payload.dig("permissions", "can_reply")
+    assert_equal 2, thread_payload["attachments"].length
+    assert_equal "task-notes.pdf", thread_payload.dig("attachments", 0, "file_name")
+    assert_equal "pdf", thread_payload.dig("attachments", 0, "attachment_type")
 
     get "/api/v1/discussion_spaces/#{space_id}/threads", headers: teacher_headers
     assert_response :success
     threads_payload = JSON.parse(response.body)
     assert_equal 1, threads_payload.length
     assert_equal true, threads_payload.first.dig("permissions", "can_moderate")
+    assert_equal 2, threads_payload.first["attachments"].length
 
     post "/api/v1/discussion_threads/#{thread_id}/posts", params: {
-      body: "Да, решете ги сите задачи."
+      files: [
+        uploaded_test_file(filename: "solution-example.pdf", content_type: "application/pdf", content: "Solution example")
+      ]
     }, headers: teacher_headers
 
     assert_response :created
     teacher_post_payload = JSON.parse(response.body)
     assert_equal teacher.id, teacher_post_payload.dig("author", "id")
     assert_equal "teacher", teacher_post_payload.dig("author", "role")
+    assert_equal 1, teacher_post_payload["attachments"].length
+    assert_equal "solution-example.pdf", teacher_post_payload.dig("attachments", 0, "file_name")
 
     post "/api/v1/discussion_threads/#{thread_id}/posts", params: {
       body: "Фала многу.",
@@ -79,11 +90,13 @@ class Api::V1::DiscussionsFlowTest < ActionDispatch::IntegrationTest
     assert_response :success
     thread_detail_payload = JSON.parse(response.body)
     assert_equal space_id, thread_detail_payload.dig("discussion_space", "id")
+    assert_equal 2, thread_detail_payload["attachments"].length
 
     get "/api/v1/discussion_threads/#{thread_id}/posts", headers: student_headers
     assert_response :success
     posts_payload = JSON.parse(response.body)
     assert_equal 2, posts_payload.length
+    assert_equal 1, posts_payload.first["attachments"].length
     assert_equal 1, posts_payload.first["replies_count"]
   end
 

@@ -14,12 +14,15 @@ module DiscussionThreads
       thread = space.discussion_threads.new(
         creator: creator,
         title: params[:title],
-        body: params[:body],
+        body: normalized_body,
         status: "active",
         pinned: false,
         locked: false,
         last_post_at: Time.current
       )
+      uploaded_files.each do |uploaded_file|
+        thread.uploads.attach(uploaded_file)
+      end
       thread.save!
 
       Result.new(success?: true, thread: thread, errors: [])
@@ -30,6 +33,14 @@ module DiscussionThreads
     private
 
     attr_reader :space, :creator, :params
+
+    def uploaded_files
+      Array(params[:files]).compact
+    end
+
+    def normalized_body
+      params[:body].presence || ""
+    end
 
     def policy
       @policy ||= DiscussionSpacePolicy.new(creator, space)

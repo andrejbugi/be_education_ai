@@ -1,3 +1,4 @@
+require "base64"
 require "json"
 require "net/http"
 require "uri"
@@ -6,8 +7,12 @@ module AiProviders
   class OpenAIClient < BaseClient
     API_URI = URI("https://api.openai.com/v1/responses")
 
-    def initialize(api_key: ENV["OPENAI_API_KEY"], model: ENV["OPENAI_MODEL"].presence || "gpt-4.1-mini")
-      @api_key = api_key
+    def initialize(
+      api_key: ENV["OPENAI_API_KEY"],
+      model: ENV["OPENAI_MODEL"].presence || "gpt-4.1-mini",
+      api_key_base64: ENV["OPENAI_API_KEY_BASE64"]
+    )
+      @api_key = normalize_api_key(api_key, api_key_base64)
       @model = model
     end
 
@@ -30,6 +35,15 @@ module AiProviders
     private
 
     attr_reader :api_key, :model
+
+    def normalize_api_key(api_key, api_key_base64)
+      return api_key if api_key.blank?
+      return api_key unless ActiveModel::Type::Boolean.new.cast(api_key_base64)
+
+      Base64.strict_decode64(api_key.to_s).strip
+    rescue ArgumentError
+      raise ArgumentError, "OPENAI_API_KEY is not valid base64"
+    end
 
     def perform_request(prompt)
       request = Net::HTTP::Post.new(API_URI)

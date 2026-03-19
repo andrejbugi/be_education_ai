@@ -10,7 +10,7 @@ module Api
         thread_policy = DiscussionThreadPolicy.new(current_user, @discussion_thread)
         return render_forbidden unless thread_policy.show?
 
-        posts = @discussion_thread.discussion_posts.includes(:author, :replies)
+        posts = @discussion_thread.discussion_posts.includes(:author, :replies, { uploads_attachments: :blob })
         posts = posts.where.not(status: "deleted")
         posts = posts.where(status: "visible") unless thread_policy.moderate?
 
@@ -47,21 +47,29 @@ module Api
       private
 
       def set_discussion_thread
-        @discussion_thread = DiscussionThread.includes(:creator, discussion_space: %i[school assignment classroom subject]).find_by(id: params[:discussion_thread_id])
+        @discussion_thread = DiscussionThread.includes(
+          :creator,
+          { uploads_attachments: :blob },
+          discussion_space: %i[school assignment classroom subject]
+        ).find_by(id: params[:discussion_thread_id])
         render_not_found unless @discussion_thread
       end
 
       def set_discussion_post
-        @discussion_post = DiscussionPost.includes(:author, discussion_thread: { discussion_space: %i[school assignment classroom subject] }).find_by(id: params[:id])
+        @discussion_post = DiscussionPost.includes(
+          :author,
+          { uploads_attachments: :blob },
+          discussion_thread: { discussion_space: %i[school assignment classroom subject] }
+        ).find_by(id: params[:id])
         render_not_found unless @discussion_post
       end
 
       def post_params
-        params.permit(:body, :parent_post_id)
+        params.permit(:body, :parent_post_id, files: [])
       end
 
       def reload_post(id)
-        DiscussionPost.includes(:author, :replies).find(id)
+        DiscussionPost.includes(:author, :replies, { uploads_attachments: :blob }).find(id)
       end
 
       def update_visibility(status)

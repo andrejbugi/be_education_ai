@@ -185,6 +185,7 @@ Examples:
 - `creator_id`
 - `title`
 - `body`
+- `uploads` multiple files
 - `status`
 - `pinned`
 - `locked`
@@ -203,6 +204,8 @@ Examples:
 - threads are the actual topics
 - `locked` blocks new replies
 - `pinned` helps teacher-important topics
+- thread creation supports multiple uploads
+- a thread may be created with text, uploads, or both
 
 ---
 
@@ -215,6 +218,7 @@ Represents posts and replies inside a thread.
 - `author_id`
 - `parent_post_id` nullable
 - `body`
+- `uploads` multiple files
 - `status`
 - `edited_at` nullable
 - `deleted_at` nullable
@@ -231,6 +235,8 @@ Represents posts and replies inside a thread.
 - `parent_post_id` supports replies
 - for MVP, one-level reply nesting is enough
 - soft delete is preferred over hard delete
+- post creation supports multiple uploads
+- a post may be created with text, uploads, or both
 
 ---
 
@@ -529,12 +535,15 @@ Return:
 
 Create a thread inside a space.
 
+Use `multipart/form-data` when uploading files and send files as `files[]`.
+
 ### Example payload
 
 ```json
 {
   "title": "Прашања за домашната по математика",
-  "body": "Овде поставувајте прашања за задачите од оваа недела."
+  "body": "Овде поставувајте прашања за задачите од оваа недела.",
+  "files": ["<binary file 1>", "<binary file 2>"]
 }
 ```
 
@@ -556,11 +565,14 @@ Return:
 
 Create a new post or reply inside a thread.
 
+Use `multipart/form-data` when uploading files and send files as `files[]`.
+
 ### Example top-level post payload
 
 ```json
 {
-  "body": "Дали треба да решиме и задача број 5?"
+  "body": "Дали треба да решиме и задача број 5?",
+  "files": ["<binary file 1>"]
 }
 ```
 
@@ -619,6 +631,16 @@ Create a new post or reply inside a thread.
   "locked": false,
   "posts_count": 8,
   "last_post_at": "2026-03-17T18:10:00Z",
+  "attachments": [
+    {
+      "id": 201,
+      "attachment_type": "pdf",
+      "file_name": "homework-guide.pdf",
+      "content_type": "application/pdf",
+      "file_size": 12455,
+      "file_url": "https://api.example.com/rails/active_storage/blobs/..."
+    }
+  ],
   "creator": {
     "id": 15,
     "full_name": "Ана Трајковска"
@@ -643,6 +665,16 @@ Create a new post or reply inside a thread.
   "edited_at": null,
   "deleted_at": null,
   "created_at": "2026-03-17T18:12:00Z",
+  "attachments": [
+    {
+      "id": 301,
+      "attachment_type": "file",
+      "file_name": "my-notes.txt",
+      "content_type": "text/plain",
+      "file_size": 512,
+      "file_url": "https://api.example.com/rails/active_storage/blobs/..."
+    }
+  ],
   "replies_count": 1
 }
 ```
