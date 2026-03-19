@@ -62,7 +62,15 @@ module Api
       end
 
       def ai_message_params
-        params.permit(:role, :message_type, :content, metadata: {})
+        message_param_source.permit(:role, :message_type, :content, metadata: {})
+      end
+
+      def message_param_source
+        return params.require(:ai_message) if params[:ai_message].is_a?(ActionController::Parameters)
+
+        ActionController::Parameters.new(
+          params.to_unsafe_h.slice("role", "message_type", "content", "metadata")
+        )
       end
 
       def enriched_ai_message_params

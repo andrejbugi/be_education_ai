@@ -4,6 +4,7 @@ It should have chat option between students and the teachers. Also between teach
 Settings to increase font size, high contrast, font for dyslecsic, etc.
 A way to divide schools, probably with subdomain.
 Create a demo for people to test. Create a tutorial, courses for learning how to use the system.
+Teachers should be able to copy/save tasks or assignments as reusable templates, then publish or assign them across different classes if needed, and later even across different schools.
 
 Very short shape:
 

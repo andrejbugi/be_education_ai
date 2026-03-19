@@ -100,4 +100,42 @@ class Api::V1::AiSessionsFlowTest < ActionDispatch::IntegrationTest
     reloaded = JSON.parse(response.body)
     assert_equal 6, reloaded["messages"].length
   end
+
+  test "student can send ai message with nested ai_message params" do
+    school = create_school(name: "ОУ Кирил Пејчиновиќ", code: "OU-KP")
+    teacher = create_teacher(school: school, email: "ai.nested.teacher@example.com")
+    classroom = create_classroom(school: school, teacher: teacher, name: "6-A")
+    subject = create_subject(school: school, teacher: teacher, name: "Историја")
+    student = create_student(school: school, classroom: classroom, email: "ai.nested.student@example.com")
+    assignment = create_assignment(classroom: classroom, subject: subject, teacher: teacher, title: "Среден век")
+    step = create_assignment_step(assignment: assignment, position: 1, title: "Чекор 1", prompt: "Опиши го настанот")
+    submission = create_submission(assignment: assignment, student: student, status: :in_progress, started_at: Time.current, submitted_at: nil)
+
+    headers = auth_headers_for(student, school: school)
+
+    post "/api/v1/ai_sessions", params: {
+      assignment_id: assignment.id,
+      submission_id: submission.id,
+      subject_id: subject.id,
+      title: "Помош по историја",
+      session_type: "assignment_help"
+    }, headers: headers
+    assert_response :created
+    session_id = JSON.parse(response.body)["id"]
+
+    post "/api/v1/ai_sessions/#{session_id}/messages", params: {
+      ai_message: {
+        role: "user",
+        message_type: "question",
+        content: "Како да почнам?",
+        metadata: { assignment_step_id: step.id }
+      }
+    }, headers: headers
+
+    assert_response :created
+    payload = JSON.parse(response.body)
+    assert_equal "user", payload.dig("user_message", "role")
+    assert_equal "assistant", payload.dig("assistant_message", "role")
+    assert_equal step.id, payload.dig("assistant_message", "metadata", "assignment_step_id")
+  end
 end
