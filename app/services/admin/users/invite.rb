@@ -12,30 +12,24 @@ module Admin
       end
 
       def call
-        return Result.new(success?: false, user: nil, invitation: nil, raw_token: nil, errors: ["Email has already been taken"]) if User.exists?(email: normalized_email)
-
-        user = nil
+        user = User.find_by(email: normalized_email)
         invitation = nil
         raw_token = SecureRandom.urlsafe_base64(32)
+        new_user = user.nil?
 
         User.transaction do
-          user = build_user
-          user.save!
+          if new_user
+            user = build_user
+            user.save!
+          end
 
-          UserRole.create!(user: user, role: Role.find_by!(name: role_name))
-          SchoolUser.create!(school: school, user: user)
+          return Result.new(success?: false, user: user, invitation: nil, raw_token: nil, errors: ["User is already a member of this school"]) if already_member_of_school?(user)
+
+          ensure_role!(user)
+          ensure_school_membership!(user, new_user: new_user)
           create_profile!(user)
 
-          invitation = UserInvitation.create!(
-            user: user,
-            school: school,
-            invited_by: admin,
-            role_name: role_name,
-            status: :pending,
-            token_digest: UserInvitation.digest(raw_token),
-            expires_at: INVITATION_EXPIRY.from_now,
-            last_sent_at: Time.current
-          )
+          invitation = create_or_refresh_invitation!(user, raw_token)
         end
 
         UserInvitationMailer.invitation_email(invitation.id, raw_token).deliver_now
@@ -68,6 +62,8 @@ module Admin
 
       def create_profile!(user)
         if role_name == "teacher"
+          return if user.teacher_profile.present?
+
           teacher_profile_params = params.fetch(:teacher_profile, {})
           user.create_teacher_profile!(
             school: school,
@@ -75,6 +71,8 @@ module Admin
             bio: teacher_profile_params[:bio]
           )
         else
+          return if user.student_profile.present?
+
           student_profile_params = params.fetch(:student_profile, {})
           user.create_student_profile!(
             school: school,
@@ -84,6 +82,39 @@ module Admin
             guardian_phone: student_profile_params[:guardian_phone]
           )
         end
+      end
+
+      def ensure_role!(user)
+        UserRole.find_or_create_by!(user: user, role: Role.find_by!(name: role_name))
+      end
+
+      def ensure_school_membership!(user, new_user:)
+        return if user.active? && !new_user
+
+        SchoolUser.find_or_create_by!(school: school, user: user)
+      end
+
+      def create_or_refresh_invitation!(user, raw_token)
+        invitation = UserInvitation.find_or_initialize_by(
+          user: user,
+          school: school,
+          role_name: role_name
+        )
+
+        invitation.assign_attributes(
+          invited_by: admin,
+          status: :pending,
+          token_digest: UserInvitation.digest(raw_token),
+          expires_at: INVITATION_EXPIRY.from_now,
+          accepted_at: nil,
+          last_sent_at: Time.current
+        )
+        invitation.save!
+        invitation
+      end
+
+      def already_member_of_school?(user)
+        SchoolUser.exists?(school: school, user: user)
       end
     end
   end

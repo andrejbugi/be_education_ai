@@ -32,6 +32,7 @@
 ## School context
 - Backend resolves school from `X-School-Id` (or `school_id` param in some endpoints).
 - Access is restricted to schools where the current user is a member.
+- A `User` account is global by email, while school access is granted through school membership.
 
 ## Pagination
 - List endpoints generally use shared `limit` / `offset` pagination.
@@ -51,6 +52,8 @@
 - admins can manage schools, invite teachers and students, and configure classrooms and subjects
 - admins can assign teachers to subjects/classrooms and students to classrooms before teachers begin daily work
 - invitation acceptance is handled through public token-based endpoints under `/api/v1/invitations/:token`
+- inviting an existing email reuses the same account and adds school access only after that invitation is accepted
+- teacher/student deactivation from admin endpoints removes access only for the selected school instead of disabling the whole account
 
 ## Assignment capabilities
 - assignments support rich `content_json`, teacher notes, and assignment-level resources

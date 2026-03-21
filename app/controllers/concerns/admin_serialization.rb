@@ -23,7 +23,7 @@ module AdminSerialization
       first_name: user.first_name,
       last_name: user.last_name,
       full_name: user.full_name,
-      active: user.active,
+      active: school_membership_active_for?(user, school: school),
       roles: user.roles.pluck(:name),
       school_id: school.id,
       invitation_status: invitation_status_for(user, school: school, role_name: "teacher", invitation: invitation),
@@ -43,7 +43,7 @@ module AdminSerialization
       first_name: user.first_name,
       last_name: user.last_name,
       full_name: user.full_name,
-      active: user.active,
+      active: school_membership_active_for?(user, school: school),
       roles: user.roles.pluck(:name),
       school_id: school.id,
       invitation_status: invitation_status_for(user, school: school, role_name: "student", invitation: invitation),
@@ -106,5 +106,9 @@ module AdminSerialization
     return "accepted" if user.active?
 
     nil
+  end
+
+  def school_membership_active_for?(user, school:)
+    user.active? && SchoolUser.exists?(user: user, school: school)
   end
 end

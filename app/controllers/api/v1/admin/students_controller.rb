@@ -89,10 +89,7 @@ module Api
         private
 
         def scoped_students
-          relation = current_school.users.joins(:roles)
-                           .where(roles: { name: "student" })
-                           .includes(:student_profile, :roles, :student_classrooms)
-                           .distinct
+          relation = school_student_scope.includes(:student_profile, :roles, :student_classrooms)
 
           if params[:q].present?
             query = "%#{params[:q].strip}%"
@@ -107,7 +104,7 @@ module Api
         end
 
         def set_student
-          @student = current_school.users.joins(:roles).where(roles: { name: "student" }).distinct.find_by(id: params[:id])
+          @student = school_student_scope.find_by(id: params[:id])
           render_not_found unless @student
         end
 
@@ -125,6 +122,19 @@ module Api
 
         def invitations_for(users, role_name:)
           UserInvitation.where(user_id: users.map(&:id), school_id: current_school.id, role_name: role_name).index_by(&:user_id)
+        end
+
+        def school_student_scope
+          member_ids = current_school.users.select(:id)
+          invited_ids = UserInvitation.where(school_id: current_school.id, role_name: "student").select(:user_id)
+
+          User.joins(:roles)
+              .where(roles: { name: "student" }, id: member_ids)
+              .or(
+                User.joins(:roles)
+                    .where(roles: { name: "student" }, id: invited_ids)
+              )
+              .distinct
         end
       end
     end

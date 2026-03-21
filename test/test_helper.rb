@@ -258,7 +258,7 @@ module ApiTestFactory
 
   def extract_invitation_token(email)
     body = email.text_part&.body&.decoded || email.html_part&.body&.decoded || email.body.decoded
-    body[%r{/api/v1/invitations/([^/\s]+)}, 1]
+    body[%r{/invitations/([^/\s<]+)}, 1]
   end
 
   def create_submission(assignment:, student:, status: :submitted, started_at: 2.days.ago, submitted_at: 1.day.ago, reviewed_at: nil, total_score: nil, late: false)

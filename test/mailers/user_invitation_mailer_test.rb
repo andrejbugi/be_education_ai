@@ -15,7 +15,8 @@ class UserInvitationMailerTest < ActionMailer::TestCase
     assert_includes email.subject, "ОУ Тест"
     assert_includes text_body, raw_token
     assert_includes html_body, raw_token
-    assert_includes text_body, "/api/v1/invitations/#{raw_token}"
-    assert_includes text_body, "/api/v1/invitations/#{raw_token}/accept"
+    assert_includes text_body, "http://localhost:3000/invitations/#{raw_token}"
+    assert_includes html_body, "http://localhost:3000/invitations/#{raw_token}"
+    refute_includes text_body, "/api/v1/invitations/#{raw_token}/accept"
   end
 end

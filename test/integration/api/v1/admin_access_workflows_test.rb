@@ -104,6 +104,124 @@ class Api::V1::AdminAccessWorkflowsTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_equal false, teacher.reload.active
     assert_equal "revoked", invitation.reload.status
+    assert_not SchoolUser.exists?(school: school, user: teacher)
+    assert_equal [], teacher.subjects.where(school_id: school.id).pluck(:id)
+    assert_equal [], teacher.teaching_classrooms.where(school_id: school.id).pluck(:id)
+  end
+
+  test "admin can invite an existing teacher into another school without duplicating the account" do
+    primary_school = create_school(code: "PRIMARY")
+    invited_school = create_school(code: "INVITED")
+    invited_school_admin = create_admin(school: invited_school, email: "admin.invited.school@example.com")
+    teacher = create_teacher(school: primary_school, email: "shared.teacher@example.com", first_name: "Shared", last_name: "Teacher")
+    TeacherProfile.create!(user: teacher, school: primary_school, title: "Existing title", bio: "Existing bio")
+
+    user_count_before = User.count
+
+    post "/api/v1/admin/teachers",
+         params: {
+           email: teacher.email,
+           first_name: "Changed",
+           last_name: "Name",
+           teacher_profile: { title: "New title", bio: "New bio" }
+         },
+         headers: auth_headers_for(invited_school_admin, school: invited_school)
+
+    assert_response :created
+    payload = JSON.parse(response.body)
+    invitation = UserInvitation.find_by!(user: teacher, school: invited_school, role_name: "teacher")
+
+    assert_equal user_count_before, User.count
+    assert_equal teacher.id, payload["id"]
+    assert_equal "pending", payload["invitation_status"]
+    assert_equal false, payload["active"]
+    assert_not SchoolUser.exists?(school: invited_school, user: teacher)
+    assert_equal "Existing title", teacher.reload.teacher_profile.title
+
+    get "/api/v1/admin/teachers",
+        headers: auth_headers_for(invited_school_admin, school: invited_school)
+
+    assert_response :success
+    listed_ids = JSON.parse(response.body).map { |row| row["id"] }
+    assert_includes listed_ids, teacher.id
+
+    post "/api/v1/auth/login", params: {
+      email: teacher.email,
+      password: "password123",
+      school_id: invited_school.id
+    }
+
+    assert_response :forbidden
+
+    post "/api/v1/invitations/#{extract_invitation_token(ActionMailer::Base.deliveries.last)}/accept",
+         params: {
+           first_name: "Shared",
+           last_name: "Teacher",
+           password: "new-password-should-be-ignored",
+           password_confirmation: "new-password-should-be-ignored"
+         }
+
+    assert_response :success
+    assert SchoolUser.exists?(school: invited_school, user: teacher)
+    assert_equal "accepted", invitation.reload.status
+    assert teacher.reload.authenticate("password123")
+    assert_not teacher.authenticate("new-password-should-be-ignored")
+
+    post "/api/v1/auth/login", params: {
+      email: teacher.email,
+      password: "password123",
+      school_id: invited_school.id
+    }
+
+    assert_response :success
+  end
+
+  test "teacher deactivation only removes access for the selected school" do
+    home_school = create_school(code: "HOME")
+    removed_school = create_school(code: "REMOVED")
+    removed_school_admin = create_admin(school: removed_school, email: "admin.removed.school@example.com")
+    teacher = create_teacher(school: home_school, email: "multi.school.teacher@example.com")
+    subject = create_subject(school: removed_school)
+    classroom = create_classroom(school: removed_school)
+
+    SchoolUser.create!(school: removed_school, user: teacher)
+    TeacherSubject.create!(teacher: teacher, subject: subject)
+    TeacherClassroom.create!(classroom: classroom, user: teacher)
+    create_user_invitation(
+      user: teacher,
+      school: removed_school,
+      invited_by: removed_school_admin,
+      role_name: "teacher",
+      status: :accepted,
+      accepted_at: Time.current
+    )
+
+    post "/api/v1/admin/teachers/#{teacher.id}/deactivate",
+         headers: auth_headers_for(removed_school_admin, school: removed_school)
+
+    assert_response :success
+    assert_equal true, teacher.reload.active
+    assert SchoolUser.exists?(school: home_school, user: teacher)
+    assert_not SchoolUser.exists?(school: removed_school, user: teacher)
+    assert_equal "revoked", UserInvitation.find_by!(user: teacher, school: removed_school, role_name: "teacher").reload.status
+    assert_equal [], teacher.subjects.where(school_id: removed_school.id).pluck(:id)
+    assert_equal [], teacher.teaching_classrooms.where(school_id: removed_school.id).pluck(:id)
+
+    post "/api/v1/auth/login", params: {
+      email: teacher.email,
+      password: "password123",
+      school_id: removed_school.id
+    }
+
+    assert_response :forbidden
+
+    post "/api/v1/auth/login", params: {
+      email: teacher.email,
+      password: "password123",
+      school_id: home_school.id
+    }
+
+    assert_response :success
   end
 
   test "admin can invite student update student and assign classrooms" do

@@ -29,6 +29,12 @@ Auth notes:
 - `GET /profile`
 - `PATCH /profile`
 
+Invitation notes:
+- user email is global, but school access is school-scoped
+- inviting an existing email reuses the same account instead of creating a duplicate user
+- existing active users only gain access to the invited school after they accept that invitation
+- for existing active users, invitation acceptance ignores password fields and keeps the current password unchanged
+
 ## Teacher area
 - `GET /teacher/dashboard`
 - `GET /teacher/classrooms`
@@ -110,6 +116,10 @@ Teacher submission detail notes:
 - `GET /admin/subjects/:id`
 - `PATCH /admin/subjects/:id`
 - `DELETE /admin/subjects/:id`
+
+Admin membership notes:
+- admin teacher/student lists include both current school members and pending invited users for that school
+- `POST /admin/teachers/:id/deactivate` and `POST /admin/students/:id/deactivate` remove access for the selected school only
 
 ## Calendar
 - `GET /calendar/events`

@@ -69,14 +69,17 @@ Admin remains school-scoped in v1. School-bound admin endpoints require `X-Schoo
 - backend creates a `user_invitations` record with a secure token digest
 - invitation email contains the invite link and accept endpoint
 - invitation expiry is `7 days`
-- accepting an invitation activates the user and sets the password
-- existing email reuse is not supported in v1 and returns `422`
+- a user email is global across the platform, while school access is school-scoped
+- inviting an existing email reuses the same `users` row instead of creating a duplicate
+- existing active users do not gain access to the new school until that school invitation is accepted
+- accepting an invitation for a new or inactive account activates the user and sets the password
+- accepting an invitation for an already active account grants the school membership and ignores password fields
 - invitation resend rotates the token and expiry
 
 ## CRUD and Delete Rules
 
 - schools use soft lifecycle through `active`
-- teachers and students are deactivated, not hard deleted
+- teacher and student deactivation is school-scoped and removes access only for the selected school
 - classrooms and subjects may be hard deleted only when safe
 - delete is blocked when operational data exists, with blocker counts returned in the response
 
@@ -87,6 +90,7 @@ Teacher and student payloads include:
 - profile data
 - invitation status
 - invitation timestamps
+- school-scoped `active` flag for the selected school membership
 - assigned classroom ids
 - assigned subject ids for teachers
 

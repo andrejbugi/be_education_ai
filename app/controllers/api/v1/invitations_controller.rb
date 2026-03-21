@@ -4,6 +4,7 @@ module Api
       include AdminSerialization
 
       skip_before_action :authenticate_user!, only: %i[show accept]
+      wrap_parameters false
 
       def show
         invitation = find_invitation
@@ -41,7 +42,13 @@ module Api
       end
 
       def invitation_accept_params
-        params.permit(:first_name, :last_name, :locale, :password, :password_confirmation)
+        params.except(:token, :controller, :action).permit(
+          :first_name,
+          :last_name,
+          :locale,
+          :password,
+          :password_confirmation
+        )
       end
     end
   end

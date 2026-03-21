@@ -33,3 +33,5 @@ Auth:
 
 - Add forgot password / reset password functionality.
 - This should include reset token handling, email delivery, and reset confirmation endpoint(s).
+- For subdomain multi-tenancy like `school1.myapplication.gov.mk`, resolve school context from subdomain instead of `X-School-Id`, scope auth sessions to that tenant, and block cross-tenant access.
+- Decide whether auth cookies should stay host-only for strict school isolation or use a parent-domain cookie for cross-subdomain SSO with stronger tenant checks.
