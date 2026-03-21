@@ -117,6 +117,23 @@ module ApiTestFactory
     )
   end
 
+  def create_user_invitation(user:, school:, invited_by:, role_name:, status: :pending, expires_at: 7.days.from_now, accepted_at: nil, last_sent_at: Time.current, raw_token: nil)
+    raw_token ||= SecureRandom.urlsafe_base64(32)
+    invitation = UserInvitation.create!(
+      user: user,
+      school: school,
+      invited_by: invited_by,
+      role_name: role_name,
+      status: status,
+      token_digest: UserInvitation.digest(raw_token),
+      expires_at: expires_at,
+      accepted_at: accepted_at,
+      last_sent_at: last_sent_at
+    )
+
+    [invitation, raw_token]
+  end
+
   def create_classroom(school:, teacher: nil, name: nil, grade_level: "7", academic_year: "2025/2026")
     classroom = Classroom.create!(
       school: school,
@@ -229,6 +246,11 @@ module ApiTestFactory
     Rack::Test::UploadedFile.new(tempfile.path, content_type, true, original_filename: filename)
   end
 
+  def extract_invitation_token(email)
+    body = email.text_part&.body&.decoded || email.html_part&.body&.decoded || email.body.decoded
+    body[%r{/api/v1/invitations/([^/\s]+)}, 1]
+  end
+
   def create_submission(assignment:, student:, status: :submitted, started_at: 2.days.ago, submitted_at: 1.day.ago, reviewed_at: nil, total_score: nil, late: false)
     Submission.create!(
       assignment: assignment,
@@ -285,5 +307,9 @@ end
 
 class ActionDispatch::IntegrationTest
   include ApiAuthHelpers
+  include ApiTestFactory
+end
+
+class ActiveSupport::TestCase
   include ApiTestFactory
 end

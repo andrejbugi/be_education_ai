@@ -8,6 +8,7 @@
 
 ## Main domains
 - Auth
+- Invitations
 - Schools and profiles
 - Classrooms and subjects
 - Subject topics
@@ -38,6 +39,12 @@
 - `student` endpoints for student dashboard and student assignment views.
 - `teacher` endpoints for teacher dashboard and grading/assignment management.
 - `admin` can access teacher/admin-level areas.
+
+## Admin capabilities
+- school-scoped admin setup endpoints now exist under `/api/v1/admin`
+- admins can manage schools, invite teachers and students, and configure classrooms and subjects
+- admins can assign teachers to subjects/classrooms and students to classrooms before teachers begin daily work
+- invitation acceptance is handled through public token-based endpoints under `/api/v1/invitations/:token`
 
 ## Assignment capabilities
 - assignments support rich `content_json`, teacher notes, and assignment-level resources

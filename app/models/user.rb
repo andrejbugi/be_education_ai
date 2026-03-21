@@ -6,6 +6,8 @@ class User < ApplicationRecord
 
   has_many :school_users, dependent: :destroy
   has_many :schools, through: :school_users
+  has_many :user_invitations, dependent: :destroy
+  has_many :sent_user_invitations, class_name: "UserInvitation", foreign_key: :invited_by_id, dependent: :restrict_with_exception
 
   has_one :teacher_profile, dependent: :destroy
   has_one :student_profile, dependent: :destroy

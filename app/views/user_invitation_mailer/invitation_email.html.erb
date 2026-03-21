@@ -1,0 +1,21 @@
+<p>Почитувани,</p>
+
+<p>
+  Добивте покана за пристап во училиштето <strong><%= @invitation.school.name %></strong>
+  како <strong><%= @invitation.role_name == "teacher" ? "наставник" : "ученик" %></strong>.
+</p>
+
+<p>
+  Линк за отворање на поканата:<br>
+  <a href="<%= @accept_url %>"><%= @accept_url %></a>
+</p>
+
+<p>
+  API endpoint за прифаќање:<br>
+  <a href="<%= @accept_endpoint %>"><%= @accept_endpoint %></a>
+</p>
+
+<p>
+  Поканата истекува на:
+  <strong><%= I18n.l(@invitation.expires_at, format: :long) rescue @invitation.expires_at %></strong>
+</p>

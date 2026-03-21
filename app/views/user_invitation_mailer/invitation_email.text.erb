@@ -1,0 +1,12 @@
+Почитувани,
+
+Добивте покана за пристап во училиштето <%= @invitation.school.name %> како <%= @invitation.role_name == "teacher" ? "наставник" : "ученик" %>.
+
+Линк за отворање на поканата:
+<%= @accept_url %>
+
+API endpoint за прифаќање:
+<%= @accept_endpoint %>
+
+Поканата истекува на:
+<%= I18n.l(@invitation.expires_at, format: :long) rescue @invitation.expires_at %>

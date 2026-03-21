@@ -8,6 +8,9 @@ Rails.application.routes.draw do
       post "auth/login", to: "auth#login"
       delete "auth/logout", to: "auth#logout"
       get "auth/me", to: "auth#me"
+      resources :invitations, only: :show, param: :token do
+        post :accept, on: :member
+      end
 
       resources :schools, only: %i[index show]
       resource :profile, only: %i[show update], controller: "profile"
@@ -60,6 +63,26 @@ Rails.application.routes.draw do
         end
         resources :students, only: :show
         resources :submissions, only: :show
+      end
+
+      namespace :admin do
+        resources :schools, only: %i[index create show update] do
+          post :deactivate, on: :member
+          post :reactivate, on: :member
+        end
+        resources :teachers, only: %i[index create show update] do
+          post :resend_invitation, on: :member
+          post :deactivate, on: :member
+          put :subjects, on: :member, action: :assign_subjects
+          put :classrooms, on: :member, action: :assign_classrooms
+        end
+        resources :students, only: %i[index create show update] do
+          post :resend_invitation, on: :member
+          post :deactivate, on: :member
+          put :classrooms, on: :member, action: :assign_classrooms
+        end
+        resources :classrooms, only: %i[index create show update destroy]
+        resources :subjects, only: %i[index create show update destroy]
       end
 
       resources :assignments, only: %i[index create show update] do

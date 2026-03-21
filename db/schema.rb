@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_03_21_103000) do
+ActiveRecord::Schema[8.0].define(version: 2026_03_21_133000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -738,6 +738,25 @@ ActiveRecord::Schema[8.0].define(version: 2026_03_21_103000) do
     t.index ["teacher_id"], name: "index_teacher_subjects_on_teacher_id"
   end
 
+  create_table "user_invitations", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.bigint "school_id", null: false
+    t.bigint "invited_by_id", null: false
+    t.string "role_name", null: false
+    t.integer "status", default: 0, null: false
+    t.string "token_digest", null: false
+    t.datetime "expires_at", null: false
+    t.datetime "accepted_at"
+    t.datetime "last_sent_at", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["invited_by_id"], name: "index_user_invitations_on_invited_by_id"
+    t.index ["school_id"], name: "index_user_invitations_on_school_id"
+    t.index ["token_digest"], name: "index_user_invitations_on_token_digest", unique: true
+    t.index ["user_id", "school_id", "role_name"], name: "index_user_invitations_on_user_school_role", unique: true
+    t.index ["user_id"], name: "index_user_invitations_on_user_id"
+  end
+
   create_table "user_presence_statuses", force: :cascade do |t|
     t.bigint "user_id", null: false
     t.string "status", default: "offline", null: false
@@ -867,6 +886,9 @@ ActiveRecord::Schema[8.0].define(version: 2026_03_21_103000) do
   add_foreign_key "teacher_profiles", "users"
   add_foreign_key "teacher_subjects", "subjects"
   add_foreign_key "teacher_subjects", "users", column: "teacher_id"
+  add_foreign_key "user_invitations", "schools"
+  add_foreign_key "user_invitations", "users"
+  add_foreign_key "user_invitations", "users", column: "invited_by_id"
   add_foreign_key "user_presence_statuses", "users"
   add_foreign_key "user_roles", "roles"
   add_foreign_key "user_roles", "users"

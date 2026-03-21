@@ -19,6 +19,8 @@ Base path: `/api/v1`
 ## Schools and profile
 - `GET /schools`
 - `GET /schools/:id`
+- `GET /invitations/:token`
+- `POST /invitations/:token/accept`
 - `GET /profile`
 - `PATCH /profile`
 
@@ -70,6 +72,39 @@ Teacher submission detail notes:
 ## Comments
 - `POST /comments`
 - `GET /comments?commentable_type=Submission&commentable_id=123`
+
+## Admin area
+- `GET /admin/schools`
+- `POST /admin/schools`
+- `GET /admin/schools/:id`
+- `PATCH /admin/schools/:id`
+- `POST /admin/schools/:id/deactivate`
+- `POST /admin/schools/:id/reactivate`
+- `GET /admin/teachers`
+- `POST /admin/teachers`
+- `GET /admin/teachers/:id`
+- `PATCH /admin/teachers/:id`
+- `POST /admin/teachers/:id/resend_invitation`
+- `POST /admin/teachers/:id/deactivate`
+- `PUT /admin/teachers/:id/subjects`
+- `PUT /admin/teachers/:id/classrooms`
+- `GET /admin/students`
+- `POST /admin/students`
+- `GET /admin/students/:id`
+- `PATCH /admin/students/:id`
+- `POST /admin/students/:id/resend_invitation`
+- `POST /admin/students/:id/deactivate`
+- `PUT /admin/students/:id/classrooms`
+- `GET /admin/classrooms`
+- `POST /admin/classrooms`
+- `GET /admin/classrooms/:id`
+- `PATCH /admin/classrooms/:id`
+- `DELETE /admin/classrooms/:id`
+- `GET /admin/subjects`
+- `POST /admin/subjects`
+- `GET /admin/subjects/:id`
+- `PATCH /admin/subjects/:id`
+- `DELETE /admin/subjects/:id`
 
 ## Calendar
 - `GET /calendar/events`
