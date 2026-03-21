@@ -16,6 +16,11 @@ Base path: `/api/v1`
 - `DELETE /auth/logout`
 - `GET /auth/me`
 
+Auth notes:
+- `POST /auth/login` sets an encrypted `HttpOnly` auth session cookie
+- `DELETE /auth/logout` revokes the current cookie-backed server session when present
+- `GET /auth/me` works with the auth cookie and includes `current_school`, `session_authenticated`, and `session_expires_at`
+
 ## Schools and profile
 - `GET /schools`
 - `GET /schools/:id`
@@ -125,7 +130,7 @@ Teacher submission detail notes:
 - `GET /student/learning_games`
 
 Student area headers:
-- `Authorization: Bearer <jwt>`
+- encrypted auth cookie
 - `X-School-Id: <selected_school_id>`
 
 ## Daily quiz

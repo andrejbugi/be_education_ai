@@ -412,7 +412,7 @@ This gives FE enough data to build:
 - AI session resume and message list UI
 
 ## Quick FE checklist
-1. Keep sending `Authorization: Bearer <token>`.
+1. Send protected requests with the auth cookie using `credentials: 'include'`.
 2. Keep sending `X-School-Id`.
 3. Treat decimal metrics like `average_grade` and `attendance_rate` as strings that may need numeric formatting in UI.
 4. Expect nullable associations in announcements, attendance, and AI sessions.

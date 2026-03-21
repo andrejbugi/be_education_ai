@@ -32,20 +32,30 @@ end
 
 module ApiAuthHelpers
   def auth_headers_for(user, school: nil)
-    token = Auth::JwtToken.encode(
-      {
-        user_id: user.id,
-        school_id: school&.id,
-        role_names: user.roles.pluck(:name)
-      }
-    )
-    headers = { "Authorization" => "Bearer #{token}" }
+    _, raw_token = create_auth_session(user: user, school: school)
+    headers = {
+      "X-Test-Auth-Session" => raw_token
+    }
     headers["X-School-Id"] = school.id if school
     headers
   end
 end
 
 module ApiTestFactory
+  def create_auth_session(user:, school: nil, expires_at: AuthSession::SESSION_LIFETIME.from_now, revoked_at: nil, raw_token: nil)
+    raw_token ||= SecureRandom.urlsafe_base64(48)
+    auth_session = AuthSession.create!(
+      user: user,
+      current_school: school,
+      token_digest: AuthSession.digest(raw_token),
+      expires_at: expires_at,
+      revoked_at: revoked_at,
+      last_seen_at: Time.current
+    )
+
+    [auth_session, raw_token]
+  end
+
   def ensure_base_roles
     Role::BASE_ROLES.each { |name| Role.find_or_create_by!(name: name) }
   end

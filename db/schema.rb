@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_03_21_133000) do
+ActiveRecord::Schema[8.0].define(version: 2026_03_21_150000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -211,6 +211,24 @@ ActiveRecord::Schema[8.0].define(version: 2026_03_21_133000) do
     t.index ["student_id"], name: "index_attendance_records_on_student_id"
     t.index ["subject_id"], name: "index_attendance_records_on_subject_id"
     t.index ["teacher_id"], name: "index_attendance_records_on_teacher_id"
+  end
+
+  create_table "auth_sessions", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.bigint "current_school_id"
+    t.string "token_digest", null: false
+    t.string "ip_address"
+    t.string "user_agent"
+    t.datetime "expires_at", null: false
+    t.datetime "revoked_at"
+    t.datetime "last_seen_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["current_school_id"], name: "index_auth_sessions_on_current_school_id"
+    t.index ["expires_at"], name: "index_auth_sessions_on_expires_at"
+    t.index ["revoked_at"], name: "index_auth_sessions_on_revoked_at"
+    t.index ["token_digest"], name: "index_auth_sessions_on_token_digest", unique: true
+    t.index ["user_id"], name: "index_auth_sessions_on_user_id"
   end
 
   create_table "calendar_events", force: :cascade do |t|
@@ -813,6 +831,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_03_21_133000) do
   add_foreign_key "attendance_records", "subjects"
   add_foreign_key "attendance_records", "users", column: "student_id"
   add_foreign_key "attendance_records", "users", column: "teacher_id"
+  add_foreign_key "auth_sessions", "schools", column: "current_school_id"
+  add_foreign_key "auth_sessions", "users"
   add_foreign_key "calendar_events", "assignments"
   add_foreign_key "calendar_events", "schools"
   add_foreign_key "classroom_users", "classrooms"

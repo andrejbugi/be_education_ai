@@ -8,7 +8,7 @@ This doc explains how frontend should load and use school data with the current 
 Use this after login (or refresh) to get current user and available schools.
 
 Headers:
-- `Authorization: Bearer <jwt>`
+- auth cookie is sent automatically when FE uses `credentials: 'include'`
 
 Response:
 ```json
@@ -51,7 +51,7 @@ Response:
 Returns one school with nested classrooms and subjects, including reusable subject topics.
 
 Headers:
-- `Authorization: Bearer <jwt>`
+- auth cookie is sent automatically when FE uses `credentials: 'include'`
 
 Response:
 ```json
@@ -83,7 +83,7 @@ Response:
 ## Login + school selector flow
 
 1. Call `POST /api/v1/auth/login`.
-2. Save `token`, `user`, and initial `school` from login response.
+2. Save `user` and initial `school` from login response.
 3. Call `GET /api/v1/auth/me` to load full `schools` list.
 4. If `schools.length > 1`, show school dropdown.
 5. Save selected school id in auth/app state.
@@ -93,6 +93,7 @@ Response:
 Note:
 - `X-School-Id` is optional for `/schools` endpoints.
 - It is important for dashboards and other scoped pages.
+- FE should use `credentials: 'include'` for all protected requests.
 
 ## Frontend data types (suggested)
 

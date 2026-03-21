@@ -13,30 +13,31 @@ module Api
           return render json: { error: "School context is invalid" }, status: :forbidden
         end
 
-        token = Auth::JwtToken.encode(
-          {
-            user_id: user.id,
-            school_id: school&.id,
-            role_names: user.roles.pluck(:name)
-          }
-        )
+        session_result = Auth::Sessions::Create.new(user: user, school: school, request: request).call
+        return render json: { errors: session_result.errors }, status: :unprocessable_entity unless session_result.success?
+
+        set_auth_session_cookie(session_result.raw_token, expires_at: session_result.auth_session.expires_at)
 
         render json: {
-          token: token,
           user: user_payload(user),
-          school: school_payload(school)
+          school: school_payload(school),
+          session_expires_at: session_result.auth_session.expires_at
         }
       end
 
       def logout
-        # Stateless JWT logout for MVP. Client should discard token.
+        Auth::Sessions::Revoke.new(auth_session: current_auth_session).call if current_auth_session
+        clear_auth_session_cookie
         head :no_content
       end
 
       def me
         render json: {
           user: user_payload(current_user),
-          schools: current_user.schools.select(:id, :name, :code)
+          schools: current_user.schools.select(:id, :name, :code),
+          current_school: school_payload(current_school),
+          session_authenticated: current_auth_session.present?,
+          session_expires_at: current_auth_session&.expires_at
         }
       end
 

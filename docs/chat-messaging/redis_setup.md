@@ -160,10 +160,10 @@ wss://app.example.com/cable
 Current auth style:
 
 ```text
-/cable?token=<jwt>
+/cable
 ```
 
-The websocket connection uses the same JWT concept as the HTTP API, but passes it in the query string.
+The websocket connection uses the same browser auth cookie as the HTTP API.
 
 ## Allowed origins
 

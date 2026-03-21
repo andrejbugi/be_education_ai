@@ -9,15 +9,11 @@ module ApplicationCable
     private
 
     def find_verified_user
-      payload = Auth::JwtToken.decode(token_from_request)
-      user = payload && User.find_by(id: payload[:user_id], active: true)
-      return user if user
+      auth_session = Auth::Sessions::Resolve.new(raw_token: cookies.encrypted[:be_education_ai_auth_session]).call
+      user = auth_session&.user
+      return user if user&.active?
 
       reject_unauthorized_connection
-    end
-
-    def token_from_request
-      request.params[:token].presence
     end
   end
 end

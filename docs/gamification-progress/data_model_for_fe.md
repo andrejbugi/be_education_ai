@@ -16,7 +16,7 @@ Important:
 ## 1) `GET /api/v1/student/dashboard`
 
 Headers:
-- `Authorization: Bearer <jwt>`
+- auth cookie
 - `X-School-Id: <selected_school_id>`
 
 Includes a compact `progress` object for dashboard cards.
@@ -91,7 +91,7 @@ Notes:
 ## 2) `GET /api/v1/student/performance`
 
 Headers:
-- `Authorization: Bearer <jwt>`
+- auth cookie
 - `X-School-Id: <selected_school_id>`
 
 Includes the normal performance snapshot plus nested `progress`.

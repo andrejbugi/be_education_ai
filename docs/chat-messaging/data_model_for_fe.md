@@ -5,8 +5,9 @@ Base path: `/api/v1`
 This doc describes the current backend payloads for the chat messaging feature so frontend can model state correctly.
 
 Important:
-- all protected chat endpoints require `Authorization: Bearer <jwt>`
+- all protected chat endpoints require the encrypted auth cookie
 - school-scoped requests should include `X-School-Id: <selected_school_id>`
+- FE should send requests with `credentials: 'include'`
 - direct conversations are implemented now
 - group conversations are not enabled yet
 - student-student direct chat is blocked

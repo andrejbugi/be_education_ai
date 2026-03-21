@@ -17,15 +17,16 @@ Current realtime status:
 Send on all protected requests:
 
 ```http
-Authorization: Bearer <jwt>
 X-School-Id: <selected_school_id>
 ```
+
+And send requests with credentials included so the auth cookie is used.
 
 ## Recommended FE flow
 
 1. Load conversations with `GET /api/v1/conversations`.
 2. When user opens one conversation, load messages with `GET /api/v1/conversations/:conversation_id/messages`.
-3. Open a websocket connection to `/cable?token=<jwt>`.
+3. Open a websocket connection to `/cable` and let the browser send the auth cookie.
 4. Subscribe to the current conversation channel.
 5. When a `message.created` event arrives, append the message to local state.
 6. After rendering unread incoming messages, call `POST /api/v1/messages/:id/deliver` and/or `POST /api/v1/messages/:id/read`.
@@ -38,18 +39,18 @@ X-School-Id: <selected_school_id>
 Websocket endpoint:
 
 ```text
-/cable?token=<jwt>
+/cable
 ```
 
 Example:
 
 ```text
-ws://localhost:3000/cable?token=YOUR_JWT
+ws://localhost:3000/cable
 ```
 
 Authentication:
-- websocket auth uses the JWT in the `token` query param
-- the backend rejects the connection if the token is missing, invalid, expired, or belongs to an inactive user
+- websocket auth uses the encrypted auth cookie from the browser session
+- the backend rejects the connection if the cookie is missing, invalid, expired, revoked, or belongs to an inactive user
 
 ## Conversation channel subscription
 

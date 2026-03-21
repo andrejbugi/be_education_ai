@@ -3,11 +3,12 @@
 ## Stack
 - Rails API (`/api/v1`)
 - PostgreSQL
-- JWT auth
+- Cookie-backed auth sessions
 - Role-based access (`admin`, `teacher`, `student`)
 
 ## Main domains
 - Auth
+- Auth sessions
 - Invitations
 - Schools and profiles
 - Classrooms and subjects
@@ -24,8 +25,8 @@
 
 ## Auth model
 1. Frontend calls `POST /api/v1/auth/login` with email/password.
-2. Backend returns JWT token + user + school context.
-3. Frontend sends `Authorization: Bearer <token>` on protected endpoints.
+2. Backend creates a server-side `auth_sessions` record and sets an encrypted `HttpOnly` auth cookie.
+3. Protected endpoints authenticate from the auth cookie.
 4. Frontend should send `X-School-Id` when user belongs to multiple schools.
 
 ## School context
@@ -39,6 +40,11 @@
 - `student` endpoints for student dashboard and student assignment views.
 - `teacher` endpoints for teacher dashboard and grading/assignment management.
 - `admin` can access teacher/admin-level areas.
+
+## Auth session capabilities
+- logout now revokes the current server-side session instead of only relying on client token removal
+- `GET /auth/me` can use the auth cookie and returns session metadata
+- Action Cable authenticates from the auth cookie
 
 ## Admin capabilities
 - school-scoped admin setup endpoints now exist under `/api/v1/admin`

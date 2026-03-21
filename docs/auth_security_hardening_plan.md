@@ -6,6 +6,20 @@ Move authentication away from browser-readable JWTs in `localStorage` to secure 
 
 This document also includes CSP and browser-hardening recommendations.
 
+## Current implementation status
+
+Phase 1 has started on the backend:
+- server-side `auth_sessions` records now back cookie-authenticated API sessions
+- login sets an encrypted `HttpOnly` auth cookie
+- logout revokes the current server-side session
+- protected API requests use the cookie-backed session
+- Action Cable accepts the auth cookie
+
+Notes:
+- legacy bearer-token auth has been removed from the backend
+- existing JWT-only sessions will need a fresh login because the app now expects the auth cookie
+- cross-origin frontend usage still needs explicit credentialed CORS configuration and `credentials: 'include'`
+
 ## Current risks
 
 - Access token is stored in `localStorage`

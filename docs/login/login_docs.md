@@ -1,16 +1,16 @@
 # Login Docs
 
-This project uses JWT bearer authentication plus optional school context.
+This project uses cookie-based authentication plus optional school context.
 
 ## Main flow
 
 1. FE can load schools for the login dropdown with `GET /api/v1/schools`.
 2. FE logs in with `POST /api/v1/auth/login`.
-3. Backend returns:
-   - `token`
+3. Backend sets an encrypted `HttpOnly` auth cookie and returns:
    - `user`
    - selected `school` if one is resolved
-4. FE stores the token and sends it on protected requests.
+   - `session_expires_at`
+4. FE sends requests with credentials included.
 5. FE can restore session state with `GET /api/v1/auth/me`.
 
 ## Login endpoint
@@ -49,7 +49,6 @@ Notes:
 
 ```json
 {
-  "token": "<jwt>",
   "user": {
     "id": 7,
     "email": "teacher@example.com",
@@ -62,25 +61,16 @@ Notes:
     "id": 12,
     "name": "ООУ Климент Охридски",
     "code": "KLO-01"
-  }
+  },
+  "session_expires_at": "2026-03-28T11:00:00.000Z"
 }
 ```
 
-## JWT behavior
-
-The backend signs a JWT containing:
-- `user_id`
-- `school_id`
-- `role_names`
-- `exp`
-
-Current expiry is 7 days.
+## Auth cookie behavior
 
 Protected endpoints expect:
-
-```http
-Authorization: Bearer <jwt>
-```
+- the encrypted `HttpOnly` auth cookie set by login
+- frontend requests sent with `credentials: 'include'`
 
 When FE is working in a school context, also send:
 
@@ -105,7 +95,14 @@ Response:
   },
   "schools": [
     { "id": 12, "name": "ООУ Климент Охридски", "code": "KLO-01" }
-  ]
+  ],
+  "current_school": {
+    "id": 12,
+    "name": "ООУ Климент Охридски",
+    "code": "KLO-01"
+  },
+  "session_authenticated": true,
+  "session_expires_at": "2026-03-28T11:00:00.000Z"
 }
 ```
 
@@ -118,10 +115,8 @@ Typical FE behavior:
 
 `DELETE /api/v1/auth/logout`
 
-Logout is stateless right now.
-Backend does not revoke the JWT server-side.
+Logout revokes the current server-side session and clears the auth cookie.
 FE should:
-- remove the token
 - clear current user
 - clear selected school
 
@@ -130,7 +125,7 @@ FE should:
 - `401 Unauthorized`
   - bad email/password
   - inactive user
-  - missing/invalid/expired token on protected endpoints
+  - missing/invalid/expired auth cookie on protected endpoints
 - `403 Forbidden`
   - valid login credentials but invalid `school_id`
   - authenticated user lacks permission for the endpoint
@@ -139,7 +134,6 @@ FE should:
 
 ## FE recommendation
 
-- keep the token in memory if possible
-- attach `Authorization` on every protected request
+- use `credentials: 'include'` on protected requests
 - attach `X-School-Id` when the request is school-scoped
 - on `401`, clear auth state and redirect to login

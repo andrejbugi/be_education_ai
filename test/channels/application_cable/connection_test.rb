@@ -3,19 +3,20 @@ require "test_helper"
 class ApplicationCable::ConnectionTest < ActionCable::Connection::TestCase
   include ApiTestFactory
 
-  test "connects with a valid token param" do
+  test "connects with a valid cookie-backed auth session" do
     school = create_school(code: "CABLE-CONNECT")
     user = create_teacher(school: school, email: "cable.teacher@example.com")
-    token = Auth::JwtToken.encode({ user_id: user.id })
+    _, raw_token = create_auth_session(user: user, school: school)
 
-    connect params: { token: token }
+    cookies.encrypted[:be_education_ai_auth_session] = raw_token
+    connect
 
     assert_equal user, connection.current_user
   end
 
-  test "rejects connection without a valid token" do
+  test "rejects connection without a valid auth session cookie" do
     assert_reject_connection do
-      connect params: { token: "invalid-token" }
+      connect
     end
   end
 end
