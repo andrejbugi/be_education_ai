@@ -4,6 +4,7 @@ Short FE handoff for the richer assignment payload.
 
 ## What changed
 Assignments now support:
+- reusable subject topics through `subject_topic_id`
 - assignment-level resources
 - uploaded assignment files through Active Storage
 - richer assignment body blocks through `content_json`
@@ -29,6 +30,8 @@ Returned on assignment details endpoints:
 - `published_at`
 - `max_points`
 - `subject`
+- `subject_topic_id`
+- `subject_topic`
 - `teacher`
 - `classroom`
 - `resources`
@@ -105,6 +108,10 @@ Teacher/admin assignment detail responses also include:
 Student assignment detail responses do not include `answer_keys`.
 Student assignment detail responses now include `submission.step_answers` so FE can repopulate previously saved answers.
 
+Assignments may include an optional reusable topic:
+- `subject_topic_id`
+- `subject_topic: { id, name }`
+
 Supported `evaluation_mode` values:
 - `manual`
 - `normalized_text`
@@ -177,6 +184,8 @@ Student submission excerpt inside `GET /api/v1/student/assignments/:id`:
 ```
 
 ## Endpoints FE should use
+- `GET /api/v1/teacher/subjects`
+- `POST /api/v1/teacher/subjects/:subject_id/topics`
 - `GET /api/v1/student/assignments/:id`
 - `GET /api/v1/assignments/:id`
 - `POST /api/v1/assignments`
@@ -189,6 +198,7 @@ Student submission excerpt inside `GET /api/v1/student/assignments/:id`:
 
 ## Create/update payload notes
 Teacher create/update can now send:
+- `subject_topic_id`
 - `teacher_notes`
 - `content_json`
 - `resources`
@@ -209,6 +219,9 @@ Development storage uses local Active Storage disk storage.
 Example top-level create/update fields:
 ```json
 {
+  "classroom_id": 4,
+  "subject_id": 3,
+  "subject_topic_id": 12,
   "title": "Македонски јазик - Домашна задача",
   "description": "Општи инструкции",
   "teacher_notes": "Прво прочитај ги материјалите.",
@@ -237,6 +250,28 @@ Example top-level create/update fields:
     }
   ]
 }
+```
+
+Example reusable subject topics response from `GET /api/v1/teacher/subjects`:
+```json
+[
+  {
+    "id": 3,
+    "name": "Математика",
+    "code": "MAT-7",
+    "school_id": 1,
+    "school": {
+      "id": 1,
+      "name": "ОУ Браќа Миладиновци"
+    },
+    "topics": [
+      {
+        "id": 12,
+        "name": "Дробки"
+      }
+    ]
+  }
+]
 ```
 
 Example multipart upload response:

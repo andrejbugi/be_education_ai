@@ -9,7 +9,7 @@ module Dashboards
       assignments = Assignment.joins(classroom: :classroom_users)
                               .where(classroom_users: { user_id: student.id })
                               .where(status: [Assignment.statuses[:published], Assignment.statuses[:scheduled]])
-                              .includes(:submissions)
+                              .includes(:submissions, :subject_topic)
                               .order(:due_at)
                               .limit(5)
       assignments = assignments.for_school(school.id) if school
@@ -44,6 +44,10 @@ module Dashboards
         assignment_id: assignment.id,
         title: assignment.title,
         due_at: assignment.due_at,
+        subject_topic: assignment.subject_topic && {
+          id: assignment.subject_topic.id,
+          name: assignment.subject_topic.name
+        },
         status: submission&.status || "not_started",
         submission_id: submission&.id
       }
@@ -51,6 +55,7 @@ module Dashboards
 
     def serialize_deadlines
       relation = Assignment.joins(:classroom)
+                           .includes(:subject_topic)
                            .where(classrooms: { id: student.student_classroom_ids })
                            .where.not(due_at: nil)
                            .order(due_at: :asc)
@@ -61,6 +66,10 @@ module Dashboards
         {
           assignment_id: assignment.id,
           title: assignment.title,
+          subject_topic: assignment.subject_topic && {
+            id: assignment.subject_topic.id,
+            name: assignment.subject_topic.name
+          },
           due_at: assignment.due_at
         }
       end

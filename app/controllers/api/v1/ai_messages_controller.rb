@@ -1,6 +1,8 @@
 module Api
   module V1
     class AiMessagesController < BaseController
+      MAX_STUDENT_QUESTION_LENGTH = 100
+
       before_action :set_ai_session
 
       def index
@@ -27,6 +29,10 @@ module Api
         message_params = enriched_ai_message_params
         if limit_reached_for?(message_params)
           return render json: question_limit_payload(message_params[:metadata]["assignment_step_id"]), status: :too_many_requests
+        end
+
+        if question_too_long?(message_params)
+          return render json: question_length_payload, status: :unprocessable_entity
         end
 
         result = AiMessages::Append.new(ai_session: @ai_session, params: message_params).call
@@ -101,6 +107,21 @@ module Api
           code: "step_question_limit_reached",
           assignment_step_id: assignment_step_id.to_i,
           limit: AiTutor::QuestionLimit::MAX_QUESTIONS_PER_STEP
+        }
+      end
+
+      def question_too_long?(message_params)
+        return false unless current_user.has_role?("student")
+        return false unless message_params[:role].to_s == "user" && message_params[:message_type].to_s == "question"
+
+        message_params[:content].to_s.strip.length > MAX_STUDENT_QUESTION_LENGTH
+      end
+
+      def question_length_payload
+        {
+          error: "AI question is too long",
+          code: "ai_question_too_long",
+          max_length: MAX_STUDENT_QUESTION_LENGTH
         }
       end
 

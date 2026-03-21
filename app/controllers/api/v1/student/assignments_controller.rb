@@ -9,7 +9,7 @@ module Api
 
         def index
           assignments = Assignment.joins(classroom: :classroom_users)
-                                  .includes(:subject, :teacher, :classroom)
+                                  .includes(:subject, :subject_topic, :teacher, :classroom)
                                   .where(classroom_users: { user_id: current_user.id })
                                   .where(status: [Assignment.statuses[:published], Assignment.statuses[:scheduled]])
 
@@ -22,7 +22,7 @@ module Api
         end
 
         def show
-          assignment = Assignment.includes({ assignment_steps: :assignment_step_answer_keys }, :subject, :teacher, :classroom, assignment_resources: { file_attachment: :blob })
+          assignment = Assignment.includes({ assignment_steps: :assignment_step_answer_keys }, :subject, :subject_topic, :teacher, :classroom, assignment_resources: { file_attachment: :blob })
                                  .find_by(id: params[:id])
           return render_not_found unless assignment
 
@@ -53,6 +53,11 @@ module Api
             subject: {
               id: assignment.subject_id,
               name: assignment.subject.name
+            },
+            subject_topic_id: assignment.subject_topic_id,
+            subject_topic: assignment.subject_topic && {
+              id: assignment.subject_topic.id,
+              name: assignment.subject_topic.name
             },
             teacher: {
               id: assignment.teacher_id,

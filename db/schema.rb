@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_03_19_100000) do
+ActiveRecord::Schema[8.0].define(version: 2026_03_21_103000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -184,9 +184,11 @@ ActiveRecord::Schema[8.0].define(version: 2026_03_19_100000) do
     t.datetime "updated_at", null: false
     t.text "teacher_notes"
     t.jsonb "content_json", default: [], null: false
+    t.bigint "subject_topic_id"
     t.index ["classroom_id", "subject_id", "due_at"], name: "index_assignments_on_classroom_id_and_subject_id_and_due_at"
     t.index ["classroom_id"], name: "index_assignments_on_classroom_id"
     t.index ["subject_id"], name: "index_assignments_on_subject_id"
+    t.index ["subject_topic_id"], name: "index_assignments_on_subject_topic_id"
     t.index ["teacher_id"], name: "index_assignments_on_teacher_id"
   end
 
@@ -654,6 +656,15 @@ ActiveRecord::Schema[8.0].define(version: 2026_03_19_100000) do
     t.index ["student_id"], name: "index_student_reward_events_on_student_id"
   end
 
+  create_table "subject_topics", force: :cascade do |t|
+    t.bigint "subject_id", null: false
+    t.string "name", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["subject_id", "name"], name: "index_subject_topics_on_subject_id_and_name", unique: true
+    t.index ["subject_id"], name: "index_subject_topics_on_subject_id"
+  end
+
   create_table "subjects", force: :cascade do |t|
     t.bigint "school_id", null: false
     t.string "name", null: false
@@ -775,6 +786,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_03_19_100000) do
   add_foreign_key "assignment_step_answer_keys", "assignment_steps"
   add_foreign_key "assignment_steps", "assignments"
   add_foreign_key "assignments", "classrooms"
+  add_foreign_key "assignments", "subject_topics"
   add_foreign_key "assignments", "subjects"
   add_foreign_key "assignments", "users", column: "teacher_id"
   add_foreign_key "attendance_records", "classrooms"
@@ -843,6 +855,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_03_19_100000) do
   add_foreign_key "student_progress_profiles", "users", column: "student_id"
   add_foreign_key "student_reward_events", "schools"
   add_foreign_key "student_reward_events", "users", column: "student_id"
+  add_foreign_key "subject_topics", "subjects"
   add_foreign_key "subjects", "schools"
   add_foreign_key "submission_step_answers", "assignment_steps"
   add_foreign_key "submission_step_answers", "submissions"

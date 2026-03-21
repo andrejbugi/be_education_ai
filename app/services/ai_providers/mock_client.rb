@@ -17,6 +17,17 @@ module AiProviders
       /од каде да почнам/i,
       /како да почнам да решавам/i
     ].freeze
+    FEEDBACK_PATTERNS = [
+      /does this sound okay/i,
+      /is this okay/i,
+      /is this good/i,
+      /дали ова звучи океј/i,
+      /дали звучи океј/i,
+      /дали е добро/i,
+      /дали е во ред/i,
+      /дали ова е точно/i,
+      /ова добро ли е/i
+    ].freeze
 
     def generate_tutor_response(prompt:)
       Response.new(
@@ -38,6 +49,7 @@ module AiProviders
       step_label = current_step_label(step)
 
       return answer_boundary_message(step_label) if matches_any?(question, ANSWER_SEEKING_PATTERNS)
+      return draft_feedback_message(question, step_label) if matches_any?(question, FEEDBACK_PATTERNS)
       return incorrect_answer_message(step_label, step_answer) if step_answer[:status] == "incorrect"
       return correct_answer_message(step_label) if step_answer[:status] == "correct"
       return starting_message(step) if matches_any?(question, STARTING_PATTERNS)
@@ -51,6 +63,7 @@ module AiProviders
       step_answer = prompt[:submission_step_answer] || {}
 
       return "boundary" if matches_any?(question, ANSWER_SEEKING_PATTERNS)
+      return "draft_feedback" if matches_any?(question, FEEDBACK_PATTERNS)
       return "feedback" if step_answer[:status] == "incorrect"
       return "reinforcement" if step_answer[:status] == "correct"
       return "starting_hint" if matches_any?(question, STARTING_PATTERNS)
@@ -94,6 +107,16 @@ module AiProviders
       end
     end
 
+    def draft_feedback_message(question, step_label)
+      extracted_attempt = extract_attempt(question)
+
+      if extracted_attempt.present?
+        "Да, ова звучи прилично добро#{step_label.present? ? " за #{step_label}" : ""}. Особено е добро што веќе го кажуваш значењето со свои зборови. За да биде попрецизно, пробај наместо \"многу ги сакаме\" да кажеш и каква врска има семејството, на пример: \"семејство се луѓе што се во роднинска врска и живеат или се чувствуваат блиски\"."
+      else
+        "Да, звучи блиску до добро. Сега направи го малку попрецизно: задржи ја главната идеја и додај што точно значи поимот, без да го повториш прашањето."
+      end
+    end
+
     def starting_message(step)
       prompt_text = step[:prompt].presence || step[:content].presence || step[:title].presence
 
@@ -114,6 +137,13 @@ module AiProviders
 
     def generic_message
       "Тука сум да помогнам чекор по чекор. Кажи ми што точно ти е нејасно и што проба досега."
+    end
+
+    def extract_attempt(question)
+      cleaned = question.to_s.strip
+      attempt = cleaned.split(/дали|is this|does this/i).first.to_s.strip
+      attempt = attempt.sub(/\A[^:.-]*[:.-]\s*/, "")
+      attempt.presence
     end
   end
 end

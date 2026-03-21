@@ -309,6 +309,18 @@ def upsert_daily_quiz_question(school:, quiz_date:, title:, body:, category:, co
   question
 end
 
+def upsert_learning_game_config(school:, game_key:, title:, description:, icon_key: nil, is_enabled: true, position: 0, metadata: {})
+  config = LearningGameConfig.find_or_initialize_by(school: school, game_key: game_key)
+  config.title = title
+  config.description = description
+  config.icon_key = icon_key
+  config.is_enabled = is_enabled
+  config.position = position
+  config.metadata = metadata
+  config.save!
+  config
+end
+
 def upsert_discussion_space(school:, space_type:, title:, description:, visibility:, created_by:, status: "active", assignment: nil, classroom: nil, subject: nil)
   space = DiscussionSpace.find_or_initialize_by(
     school: school,
@@ -549,7 +561,18 @@ SCHOOL_BLUEPRINTS.each_with_index do |blueprint, school_offset|
     record.city = blueprint[:city]
     record.active = true
   end
-  school.update!(name: blueprint[:name], city: blueprint[:city], active: true)
+  school.update!(
+    name: blueprint[:name],
+    city: blueprint[:city],
+    active: true,
+    settings: school.settings.to_h.merge(
+      "quiz_games" => {
+        "timezone" => QuizGames::FeatureWindow::DEFAULT_TIMEZONE,
+        "available_from" => "00:00",
+        "available_until" => "23:59"
+      }
+    )
+  )
   school_records[blueprint[:code]] = school
 
   admin_data = blueprint[:admin]
@@ -1384,6 +1407,76 @@ daily_quiz_seed_date = Time.current.in_time_zone(QuizGames::FeatureWindow::DEFAU
   )
 end
 
+[
+  {
+    game_key: "geometry_shapes",
+    title: "Геометрија",
+    description: "Препознај форми, агли и основни геометриски односи.",
+    icon_key: "shapes",
+    position: 1,
+    metadata: {
+      category: "geometry",
+      status: "available",
+      difficulty: "easy",
+      route_slug: "geometry-shapes",
+      coming_soon: true
+    }
+  },
+  {
+    game_key: "basic_math_speed",
+    title: "Брза математика",
+    description: "Решавај кратки математички задачи со брзо темпо.",
+    icon_key: "math",
+    position: 2,
+    metadata: {
+      category: "math",
+      status: "available",
+      difficulty: "easy",
+      route_slug: "basic-math-speed",
+      coming_soon: true
+    }
+  },
+  {
+    game_key: "memory_pairs",
+    title: "Меморија",
+    description: "Пронајди парови и вежбај внимание и паметење.",
+    icon_key: "memory",
+    position: 3,
+    metadata: {
+      category: "logic",
+      status: "available",
+      difficulty: "easy",
+      route_slug: "memory-pairs",
+      coming_soon: true
+    }
+  },
+  {
+    game_key: "logic_patterns",
+    title: "Логички шеми",
+    description: "Откриј ја следната шема и продолжи ја низата.",
+    icon_key: "patterns",
+    position: 4,
+    metadata: {
+      category: "logic",
+      status: "available",
+      difficulty: "medium",
+      route_slug: "logic-patterns",
+      coming_soon: true
+    }
+  }
+].each do |game_attrs|
+  upsert_learning_game_config(
+    school: nil,
+    game_key: game_attrs[:game_key],
+    title: game_attrs[:title],
+    description: game_attrs[:description],
+    icon_key: game_attrs[:icon_key],
+    is_enabled: true,
+    position: game_attrs[:position],
+    metadata: game_attrs[:metadata]
+  )
+end
+
 puts "Seed data prepared:"
 puts "- Schools: #{School.count}"
 puts "- Users: #{User.count}"
@@ -1410,6 +1503,7 @@ puts "- Discussion spaces: #{DiscussionSpace.count}"
 puts "- Discussion threads: #{DiscussionThread.count}"
 puts "- Discussion posts: #{DiscussionPost.count}"
 puts "- Daily quiz questions: #{DailyQuizQuestion.count}"
+puts "- Learning game configs: #{LearningGameConfig.count}"
 
 School.order(:id).each do |school|
   school_teacher_count = school.school_users

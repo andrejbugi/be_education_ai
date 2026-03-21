@@ -82,4 +82,8 @@ The create-message endpoint now returns both stored messages:
 - To use the real OpenAI provider, configure the backend environment as documented in [ai_provider_setup.md](/home/andrejbugi/projects/be_education_ai/docs/ai_provider_setup.md).
 - If `assignment_step_id` is missing, the backend tries to infer the active step from the submission state.
 - Students are limited to 3 AI question messages per assignment step.
+- Student AI question messages are limited to 100 characters.
+- Tutor replies are trimmed to a maximum of 100 words.
+- The tutor does not provide ready-made links, source lists, or presentation work for the student.
 - If the limit is reached, `POST /api/v1/ai_sessions/:id/messages` returns `429` with `code: "step_question_limit_reached"`.
+- If a student question is too long, `POST /api/v1/ai_sessions/:id/messages` returns `422` with `code: "ai_question_too_long"`.

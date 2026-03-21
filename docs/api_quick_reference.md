@@ -27,6 +27,7 @@ Base path: `/api/v1`
 - `GET /teacher/classrooms`
 - `GET /teacher/classrooms/:id`
 - `GET /teacher/subjects`
+- `POST /teacher/subjects/:subject_id/topics`
 - `GET /teacher/students/:id`
 - `GET /teacher/submissions/:id`
 
@@ -53,11 +54,18 @@ Teacher submission detail notes:
 - `POST /submissions/:submission_id/grades`
 
 ## Assignment checking notes
+- assignments can now optionally reference a reusable subject topic through `subject_topic_id`
+- assignment payloads may include both `subject_topic_id` and nested `subject_topic`
 - steps support `evaluation_mode`: `manual | normalized_text | numeric | regex`
 - teacher/admin assignment step payloads can include `answer_keys`
 - student assignment payloads do not include `answer_keys`
 - `GET /student/assignments/:id` includes `submission.step_answers` when the student has already started work
 - submission step answers may return `answered`, `correct`, or `incorrect`
+
+## Subject topics
+- use `GET /teacher/subjects` to load teacher-visible subjects together with reusable `topics`
+- use `POST /teacher/subjects/:subject_id/topics` to create a new reusable topic for a subject
+- `GET /schools/:id` also returns school subjects with `topics` and `subject_topics`
 
 ## Comments
 - `POST /comments`

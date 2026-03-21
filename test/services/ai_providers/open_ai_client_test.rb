@@ -1,6 +1,11 @@
 require "test_helper"
 require "base64"
 
+# AI tests are disabled by default to avoid accidental provider usage and cost.
+# Run explicitly only when intended:
+#   RUN_AI_TESTS=true bin/rails test test/services/ai_providers/open_ai_client_test.rb
+return unless ENV["RUN_AI_TESTS"] == "true"
+
 class AiProviders::OpenAIClientTest < ActiveSupport::TestCase
   test "uses decoded api key when base64 flag is enabled" do
     encoded_key = Base64.strict_encode64("decoded-secret-key")

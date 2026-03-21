@@ -48,7 +48,7 @@ Response:
 ```
 
 ## 3) `GET /api/v1/schools/:id`
-Returns one school with nested classrooms and subjects.
+Returns one school with nested classrooms and subjects, including reusable subject topics.
 
 Headers:
 - `Authorization: Bearer <jwt>`
@@ -65,7 +65,17 @@ Response:
     { "id": 10, "name": "7-A", "grade_level": "7", "academic_year": "2025/2026" }
   ],
   "subjects": [
-    { "id": 4, "name": "Математика", "code": "MAT-7" }
+    {
+      "id": 4,
+      "name": "Математика",
+      "code": "MAT-7",
+      "topics": [
+        { "id": 12, "name": "Дробки" }
+      ],
+      "subject_topics": [
+        { "id": 12, "name": "Дробки" }
+      ]
+    }
   ]
 }
 ```
@@ -109,9 +119,23 @@ export type SchoolDetails = SchoolListItem & {
     id: number;
     name: string;
     code: string | null;
+    topics: {
+      id: number;
+      name: string;
+    }[];
+    subject_topics: {
+      id: number;
+      name: string;
+    }[];
   }[];
 };
 ```
+
+## Topic loading notes
+
+- For teacher assignment creation, FE should usually use `GET /api/v1/teacher/subjects` because it returns teacher-visible subjects together with reusable `topics`.
+- `GET /api/v1/schools/:id` also returns subject topics, so it can be used as a fallback or for broader school-scoped setup pages.
+- To create a new reusable topic under one subject, use `POST /api/v1/teacher/subjects/:subject_id/topics` with `{ "name": "..." }`.
 
 ## Error handling
 

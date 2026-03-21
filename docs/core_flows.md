@@ -10,11 +10,12 @@
 - `admin` -> admin/teacher area
 
 ## 2. Teacher creates and publishes assignment
-1. `POST /api/v1/assignments` with `classroom_id`, `subject_id`, and optional `steps`.
+1. `POST /api/v1/assignments` with `classroom_id`, `subject_id`, optional `subject_topic_id`, and optional `steps`.
 2. Steps can use `evaluation_mode` plus `answer_keys` for auto-checked responses.
 3. Steps that use `manual` evaluation stay review-based.
 4. `POST /api/v1/assignments/:id/publish` to publish and notify students.
 5. Assignment starts as `draft` unless status is set.
+6. If a teacher needs a new reusable topic first, FE can call `POST /api/v1/teacher/subjects/:subject_id/topics`.
 
 ## 3. Student submission flow
 1. `POST /api/v1/assignments/:assignment_id/submissions` starts submission.

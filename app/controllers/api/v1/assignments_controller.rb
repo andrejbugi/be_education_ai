@@ -61,12 +61,12 @@ module Api
       private
 
       def set_assignment
-        @assignment = Assignment.includes({ assignment_steps: :assignment_step_answer_keys }, :classroom, :subject, assignment_resources: { file_attachment: :blob }).find_by(id: params[:id])
+        @assignment = Assignment.includes({ assignment_steps: :assignment_step_answer_keys }, :classroom, :subject, :subject_topic, assignment_resources: { file_attachment: :blob }).find_by(id: params[:id])
         render_not_found unless @assignment
       end
 
       def assignment_scope
-        scope = Assignment.includes(:classroom, :subject, :teacher)
+        scope = Assignment.includes(:classroom, :subject, :subject_topic, :teacher)
         school = current_school
         scope = scope.for_school(school.id) if school
 
@@ -93,6 +93,7 @@ module Api
       def assignment_params
         ActionController::Parameters.new(assignment_request_params.to_unsafe_h.slice(
           "subject_id",
+          "subject_topic_id",
           "classroom_id",
           "title",
           "description",
@@ -104,6 +105,7 @@ module Api
           "settings"
         )).permit(
           :subject_id,
+          :subject_topic_id,
           :classroom_id,
           :title,
           :description,
@@ -120,6 +122,8 @@ module Api
 
       def update_assignment_params
         ActionController::Parameters.new(assignment_request_params.to_unsafe_h.slice(
+          "subject_id",
+          "subject_topic_id",
           "title",
           "description",
           "teacher_notes",
@@ -129,6 +133,8 @@ module Api
           "status",
           "settings"
         )).permit(
+          :subject_id,
+          :subject_topic_id,
           :title,
           :description,
           :teacher_notes,
@@ -240,6 +246,11 @@ module Api
           subject: {
             id: assignment.subject_id,
             name: assignment.subject.name
+          },
+          subject_topic_id: assignment.subject_topic_id,
+          subject_topic: assignment.subject_topic && {
+            id: assignment.subject_topic.id,
+            name: assignment.subject_topic.name
           },
           classroom: {
             id: assignment.classroom_id,

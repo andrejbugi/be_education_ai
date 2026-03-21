@@ -55,7 +55,9 @@ Rails.application.routes.draw do
         get "dashboard", to: "dashboards#show"
         get "homerooms", to: "homerooms#index"
         resources :classrooms, only: %i[index show]
-        resources :subjects, only: :index
+        resources :subjects, only: :index do
+          resources :topics, only: :create, controller: "subject_topics"
+        end
         resources :students, only: :show
         resources :submissions, only: :show
       end

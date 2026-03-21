@@ -6,10 +6,12 @@ class Api::V1::LearningWorkflowEndpointsTest < ActionDispatch::IntegrationTest
     teacher = create_teacher(school: school)
     classroom = create_classroom(school: school, teacher: teacher)
     subject = create_subject(school: school, teacher: teacher)
+    subject_topic = create_subject_topic(subject: subject, name: "Дробки")
 
     post "/api/v1/assignments", params: {
       classroom_id: classroom.id,
       subject_id: subject.id,
+      subject_topic_id: subject_topic.id,
       title: "Нова задача",
       description: "Опис",
       teacher_notes: "Прочитај материјали пред да почнеш.",
@@ -41,6 +43,9 @@ class Api::V1::LearningWorkflowEndpointsTest < ActionDispatch::IntegrationTest
     assert_response :created
     payload = JSON.parse(response.body)
     assert_equal "Нова задача", payload["title"]
+    assert_equal subject_topic.id, payload["subject_topic_id"]
+    assert_equal subject_topic.id, payload.dig("subject_topic", "id")
+    assert_equal "Дробки", payload.dig("subject_topic", "name")
     assert_equal "Прочитај материјали пред да почнеш.", payload["teacher_notes"]
     assert_equal "normalized_text", payload["steps"].first["evaluation_mode"]
     assert_equal "x=5", payload["steps"].first["answer_keys"].first["value"]
@@ -67,12 +72,15 @@ class Api::V1::LearningWorkflowEndpointsTest < ActionDispatch::IntegrationTest
     teacher = create_teacher(school: school)
     classroom = create_classroom(school: school, teacher: teacher)
     subject = create_subject(school: school, teacher: teacher)
-    assignment = create_assignment(classroom: classroom, subject: subject, teacher: teacher, title: "Старо")
+    old_topic = create_subject_topic(subject: subject, name: "Стар поим")
+    new_topic = create_subject_topic(subject: subject, name: "Нова тема")
+    assignment = create_assignment(classroom: classroom, subject: subject, teacher: teacher, title: "Старо", subject_topic: old_topic)
 
-    patch "/api/v1/assignments/#{assignment.id}", params: { title: "Ново" }, headers: auth_headers_for(teacher, school: school)
+    patch "/api/v1/assignments/#{assignment.id}", params: { title: "Ново", subject_topic_id: new_topic.id }, headers: auth_headers_for(teacher, school: school)
 
     assert_response :success
     assert_equal "Ново", assignment.reload.title
+    assert_equal new_topic.id, assignment.reload.subject_topic_id
   end
 
   test "other teacher cannot update assignment" do
@@ -176,10 +184,12 @@ class Api::V1::LearningWorkflowEndpointsTest < ActionDispatch::IntegrationTest
     teacher = create_teacher(school: school)
     classroom = create_classroom(school: school, teacher: teacher)
     subject = create_subject(school: school, teacher: teacher)
+    subject_topic = create_subject_topic(subject: subject, name: "Глаголи")
     assignment = create_assignment(
       classroom: classroom,
       subject: subject,
       teacher: teacher,
+      subject_topic: subject_topic,
       teacher_notes: "Забелешки за наставник",
       content_json: [{ type: "heading", text: "Наслов" }]
     )
@@ -202,12 +212,66 @@ class Api::V1::LearningWorkflowEndpointsTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     payload = JSON.parse(response.body)
+    assert_equal "Глаголи", payload.dig("subject_topic", "name")
     assert_equal "Забелешки за наставник", payload["teacher_notes"]
     assert_equal 1, payload["resources"].length
     assert_equal "Одговори со свои зборови.", payload["steps"].first["prompt"]
     assert_equal "Пример одговор", payload["steps"].first["example_answer"]
     assert_equal "normalized_text", payload["steps"].first["evaluation_mode"]
     assert_equal "x=5", payload["steps"].first["answer_keys"].first["value"]
+  end
+
+  test "teacher can create reusable topic for a subject" do
+    school = create_school
+    teacher = create_teacher(school: school)
+    subject = create_subject(school: school, teacher: teacher, name: "Математика")
+
+    post "/api/v1/teacher/subjects/#{subject.id}/topics",
+         params: { name: "Делење" },
+         headers: auth_headers_for(teacher, school: school)
+
+    assert_response :created
+    payload = JSON.parse(response.body)
+    assert_equal "Делење", payload["name"]
+    assert_equal subject.id, payload["subject_id"]
+  end
+
+  test "teacher subjects index includes reusable topics" do
+    school = create_school
+    teacher = create_teacher(school: school)
+    subject = create_subject(school: school, teacher: teacher, name: "Математика")
+    topic = create_subject_topic(subject: subject, name: "Делење")
+
+    get "/api/v1/teacher/subjects", headers: auth_headers_for(teacher, school: school)
+
+    assert_response :success
+    payload = JSON.parse(response.body)
+    math_subject = payload.find { |item| item["id"] == subject.id }
+
+    assert_not_nil math_subject
+    assert_equal topic.id, math_subject.dig("topics", 0, "id")
+    assert_equal "Делење", math_subject.dig("topics", 0, "name")
+  end
+
+  test "teacher cannot attach topic from another subject" do
+    school = create_school
+    teacher = create_teacher(school: school)
+    classroom = create_classroom(school: school, teacher: teacher)
+    math = create_subject(school: school, teacher: teacher, name: "Математика")
+    language = create_subject(school: school, teacher: teacher, name: "Македонски")
+    wrong_topic = create_subject_topic(subject: language, name: "Глаголи")
+
+    post "/api/v1/assignments", params: {
+      classroom_id: classroom.id,
+      subject_id: math.id,
+      subject_topic_id: wrong_topic.id,
+      title: "Нова задача",
+      assignment_type: "homework"
+    }, headers: auth_headers_for(teacher, school: school)
+
+    assert_response :unprocessable_entity
+    payload = JSON.parse(response.body)
+    assert_includes payload["errors"].join(" "), "Subject topic"
   end
 
   test "teacher can update assignment step answer keys" do
@@ -262,10 +326,11 @@ class Api::V1::LearningWorkflowEndpointsTest < ActionDispatch::IntegrationTest
     student = create_student(school: school, classroom: classroom)
     assignment = create_assignment(classroom: classroom, subject: subject, teacher: teacher)
 
-    post "/api/v1/assignments/#{assignment.id}/submissions", params: { student_id: student.id }, headers: auth_headers_for(teacher, school: school)
+    assert_difference("Submission.count", 1) do
+      post "/api/v1/assignments/#{assignment.id}/submissions", params: { student_id: student.id }, headers: auth_headers_for(teacher, school: school)
+    end
 
     assert_response :created
-    assert_equal 1, Submission.count
   end
 
   test "teacher can update student submission feedback" do

@@ -20,7 +20,20 @@ module Api
 
           render json: classroom_payload(classroom).merge(
             students: classroom.students.select(:id, :first_name, :last_name, :email),
-            assignments: classroom.assignments.order(created_at: :desc).limit(20).as_json(only: %i[id title status due_at subject_id])
+            assignments: classroom.assignments.includes(:subject_topic).order(created_at: :desc).limit(20).map do |assignment|
+              {
+                id: assignment.id,
+                title: assignment.title,
+                status: assignment.status,
+                due_at: assignment.due_at,
+                subject_id: assignment.subject_id,
+                subject_topic_id: assignment.subject_topic_id,
+                subject_topic: assignment.subject_topic && {
+                  id: assignment.subject_topic.id,
+                  name: assignment.subject_topic.name
+                }
+              }
+            end
           )
         end
 

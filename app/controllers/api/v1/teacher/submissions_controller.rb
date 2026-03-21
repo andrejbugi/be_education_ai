@@ -14,6 +14,7 @@ module Api
             :grades,
             assignment: [
               :subject,
+              :subject_topic,
               :classroom,
               :teacher,
               { assignment_steps: :assignment_step_answer_keys }
@@ -59,6 +60,11 @@ module Api
               subject: {
                 id: submission.assignment.subject_id,
                 name: submission.assignment.subject.name
+              },
+              subject_topic_id: submission.assignment.subject_topic_id,
+              subject_topic: submission.assignment.subject_topic && {
+                id: submission.assignment.subject_topic.id,
+                name: submission.assignment.subject_topic.name
               },
               classroom: {
                 id: submission.assignment.classroom_id,

@@ -29,6 +29,7 @@ Example:
 {
   "classroom_id": 4,
   "subject_id": 3,
+  "subject_topic_id": 12,
   "title": "Равенки",
   "description": "Реши ги чекорите",
   "steps": [
@@ -57,11 +58,27 @@ Example:
 
 The same `evaluation_mode` and `answer_keys` shape applies there.
 
+If the teacher wants to assign a reusable topic first:
+- load topics from `GET /teacher/subjects`
+- create a new one with `POST /teacher/subjects/:subject_id/topics`
+
 ## 3. Teacher/admin assignment responses
 Teacher/admin assignment detail responses include answer keys so the editing UI can load them back.
 
 Endpoint:
 - `GET /assignments/:id`
+
+Assignment-level excerpt:
+```json
+{
+  "id": 21,
+  "subject_topic_id": 12,
+  "subject_topic": {
+    "id": 12,
+    "name": "Дробки"
+  }
+}
+```
 
 Step example:
 ```json
@@ -90,6 +107,18 @@ Student assignment detail responses do include the student's own `submission.ste
 
 Endpoint:
 - `GET /student/assignments/:id`
+
+Assignment-level excerpt:
+```json
+{
+  "id": 21,
+  "subject_topic_id": 12,
+  "subject_topic": {
+    "id": 12,
+    "name": "Дробки"
+  }
+}
+```
 
 Student-safe step example:
 ```json
@@ -175,6 +204,7 @@ Example response excerpt:
 - answer key `value` is treated as a regex pattern
 
 ## 7. FE recommendations
+- when a subject is selected in teacher create/edit flows, load or reuse that subject’s `topics` for the assignment topic dropdown
 - show an “Auto-checked” hint when `evaluation_mode` is not `manual`
 - show a “Needs review” hint when `evaluation_mode` is `manual`
 - after every save, refresh UI from returned submission payload instead of assuming the result locally

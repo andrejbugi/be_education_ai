@@ -1,5 +1,6 @@
 class Assignment < ApplicationRecord
   belongs_to :subject
+  belongs_to :subject_topic, optional: true
   belongs_to :classroom
   belongs_to :teacher, class_name: "User"
 
@@ -21,6 +22,16 @@ class Assignment < ApplicationRecord
 
   validates :title, presence: true
   validates :assignment_type, presence: true
+  validate :subject_topic_matches_subject
 
   scope :for_school, ->(school_id) { joins(:classroom).where(classrooms: { school_id: school_id }) }
+
+  private
+
+  def subject_topic_matches_subject
+    return unless subject_topic
+    return if subject_topic.subject_id == subject_id
+
+    errors.add(:subject_topic_id, "must belong to the selected subject")
+  end
 end

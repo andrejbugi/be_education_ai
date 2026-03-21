@@ -138,12 +138,20 @@ module ApiTestFactory
     subject
   end
 
-  def create_assignment(classroom:, subject:, teacher:, title: nil, status: :published, due_at: 2.days.from_now, published_at: Time.current, teacher_notes: "Teacher notes", content_json: nil)
+  def create_subject_topic(subject:, name: nil)
+    SubjectTopic.create!(
+      subject: subject,
+      name: name || unique_value("Тема")
+    )
+  end
+
+  def create_assignment(classroom:, subject:, teacher:, title: nil, subject_topic: nil, status: :published, due_at: 2.days.from_now, published_at: Time.current, teacher_notes: "Teacher notes", content_json: nil)
     Assignment.create!(
       classroom: classroom,
       subject: subject,
       teacher: teacher,
       title: title || unique_value("Задача"),
+      subject_topic: subject_topic,
       description: "Опис",
       teacher_notes: teacher_notes,
       assignment_type: "homework",

@@ -7,20 +7,34 @@ module Api
           return if performed?
 
           subjects = if current_user.has_role?("admin")
-                       Subject.includes(:school).all
+                       Subject.includes(:school, :subject_topics).all
                      else
-                       current_user.subjects.includes(:school).distinct
+                       current_user.subjects.includes(:school, :subject_topics).distinct
                      end
           school = current_school
           subjects = subjects.where(school: school) if school
           limit, offset = pagination_params
 
-          render json: subjects.order(:name).limit(limit).offset(offset).as_json(
-            only: %i[id name code school_id],
-            include: {
-              school: { only: %i[id name] }
+          payload = subjects.order(:name).limit(limit).offset(offset).map do |subject|
+            {
+              id: subject.id,
+              name: subject.name,
+              code: subject.code,
+              school_id: subject.school_id,
+              school: {
+                id: subject.school.id,
+                name: subject.school.name
+              },
+              topics: subject.subject_topics.order(:name).map do |topic|
+                {
+                  id: topic.id,
+                  name: topic.name
+                }
+              end
             }
-          )
+          end
+
+          render json: payload
         end
       end
     end

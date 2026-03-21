@@ -4,6 +4,7 @@ class Subject < ApplicationRecord
   has_many :teacher_subjects, dependent: :destroy
   has_many :teachers, through: :teacher_subjects, source: :teacher
 
+  has_many :subject_topics, -> { order(:name) }, dependent: :destroy
   has_many :assignments, dependent: :destroy
   has_many :announcements, dependent: :nullify
   has_many :attendance_records, dependent: :nullify
