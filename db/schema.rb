@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_03_21_150000) do
+ActiveRecord::Schema[8.0].define(version: 2026_03_22_101000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -266,6 +266,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_03_21_150000) do
     t.string "academic_year"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "room_name"
+    t.string "room_label"
     t.index ["school_id", "name", "academic_year"], name: "index_classrooms_on_school_id_and_name_and_academic_year", unique: true
     t.index ["school_id"], name: "index_classrooms_on_school_id"
   end
@@ -689,6 +691,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_03_21_150000) do
     t.string "code"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "room_name"
+    t.string "room_label"
     t.index ["school_id", "name"], name: "index_subjects_on_school_id_and_name", unique: true
     t.index ["school_id"], name: "index_subjects_on_school_id"
   end
@@ -742,6 +746,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_03_21_150000) do
     t.text "bio"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "room_name"
+    t.string "room_label"
     t.index ["school_id"], name: "index_teacher_profiles_on_school_id"
     t.index ["user_id"], name: "index_teacher_profiles_on_user_id", unique: true
   end
@@ -804,6 +810,26 @@ ActiveRecord::Schema[8.0].define(version: 2026_03_21_150000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["email"], name: "index_users_on_email", unique: true
+  end
+
+  create_table "weekly_schedule_slots", force: :cascade do |t|
+    t.bigint "school_id", null: false
+    t.bigint "classroom_id", null: false
+    t.bigint "subject_id", null: false
+    t.bigint "teacher_id", null: false
+    t.integer "day_of_week", null: false
+    t.integer "period_number", null: false
+    t.string "room_name"
+    t.string "room_label"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["classroom_id", "day_of_week", "period_number"], name: "idx_weekly_schedule_slots_on_classroom_day_period", unique: true
+    t.index ["classroom_id"], name: "index_weekly_schedule_slots_on_classroom_id"
+    t.index ["school_id", "day_of_week"], name: "idx_weekly_schedule_slots_on_school_day"
+    t.index ["school_id"], name: "index_weekly_schedule_slots_on_school_id"
+    t.index ["subject_id"], name: "index_weekly_schedule_slots_on_subject_id"
+    t.index ["teacher_id", "day_of_week", "period_number"], name: "idx_weekly_schedule_slots_on_teacher_day_period"
+    t.index ["teacher_id"], name: "index_weekly_schedule_slots_on_teacher_id"
   end
 
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
@@ -912,4 +938,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_03_21_150000) do
   add_foreign_key "user_presence_statuses", "users"
   add_foreign_key "user_roles", "roles"
   add_foreign_key "user_roles", "users"
+  add_foreign_key "weekly_schedule_slots", "classrooms"
+  add_foreign_key "weekly_schedule_slots", "schools"
+  add_foreign_key "weekly_schedule_slots", "subjects"
+  add_foreign_key "weekly_schedule_slots", "users", column: "teacher_id"
 end

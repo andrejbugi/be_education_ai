@@ -43,7 +43,7 @@ class Api::V1::AuthProfileAndSchoolsTest < ActionDispatch::IntegrationTest
   test "profile show returns teacher profile and roles" do
     school = create_school
     teacher = create_teacher(school: school, first_name: "Ана", last_name: "Трајковска")
-    TeacherProfile.create!(user: teacher, school: school, title: "Наставник", bio: "Био")
+    TeacherProfile.create!(user: teacher, school: school, title: "Наставник", bio: "Био", room_name: "Кабинет 12", room_label: "К12")
 
     get "/api/v1/profile", headers: auth_headers_for(teacher, school: school)
 
@@ -51,6 +51,7 @@ class Api::V1::AuthProfileAndSchoolsTest < ActionDispatch::IntegrationTest
     payload = JSON.parse(response.body)
     assert_equal ["teacher"], payload["roles"]
     assert_equal "Наставник", payload["teacher_profile"]["title"]
+    assert_equal "Кабинет 12", payload["teacher_profile"]["room_name"]
   end
 
   test "profile update persists teacher profile changes" do
@@ -62,7 +63,9 @@ class Api::V1::AuthProfileAndSchoolsTest < ActionDispatch::IntegrationTest
       first_name: "Ново",
       teacher_profile: {
         title: "Наслов",
-        bio: "Ново био"
+        bio: "Ново био",
+        room_name: "Лабораторија",
+        room_label: "Л1"
       }
     }, headers: auth_headers_for(teacher, school: school)
 
@@ -70,6 +73,7 @@ class Api::V1::AuthProfileAndSchoolsTest < ActionDispatch::IntegrationTest
     teacher.reload
     assert_equal "Ново", teacher.first_name
     assert_equal "Наслов", teacher.teacher_profile.title
+    assert_equal "Лабораторија", teacher.teacher_profile.room_name
   end
 
   test "profile update persists student profile changes" do

@@ -7,6 +7,7 @@ class Classroom < ApplicationRecord
   has_many :teacher_classrooms, dependent: :destroy
   has_many :teachers, through: :teacher_classrooms, source: :user
 
+  has_many :weekly_schedule_slots, dependent: :destroy
   has_many :assignments, dependent: :destroy
   has_many :homeroom_assignments, dependent: :destroy
   has_one :active_homeroom_assignment, -> { where(active: true).order(starts_on: :desc) }, class_name: "HomeroomAssignment"

@@ -26,6 +26,7 @@ module Admin
           homeroom_assignments: classroom.homeroom_assignments.count,
           announcements: classroom.announcements.count,
           attendance_records: classroom.attendance_records.count,
+          weekly_schedule_slots: classroom.weekly_schedule_slots.count,
           performance_snapshots: classroom.student_performance_snapshots.count,
           discussion_spaces: classroom.discussion_spaces.count
         }.select { |_, count| count.positive? }

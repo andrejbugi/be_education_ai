@@ -56,7 +56,7 @@ module Api
         end
 
         def classroom_params
-          params.permit(:name, :grade_level, :academic_year)
+          params.permit(:name, :grade_level, :academic_year, :room_name, :room_label)
         end
       end
     end

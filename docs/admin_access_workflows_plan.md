@@ -10,6 +10,7 @@ The first release covers:
 - student onboarding by invitation
 - classroom CRUD
 - subject CRUD
+- repeating weekly classroom schedules
 - teacher to subject assignment
 - teacher to classroom assignment
 - student to classroom assignment
@@ -51,6 +52,8 @@ Admin remains school-scoped in v1. School-bound admin endpoints require `X-Schoo
 - `GET /api/v1/admin/classrooms/:id`
 - `PATCH /api/v1/admin/classrooms/:id`
 - `DELETE /api/v1/admin/classrooms/:id`
+- `GET /api/v1/admin/classrooms/:classroom_id/schedule`
+- `PUT /api/v1/admin/classrooms/:classroom_id/schedule`
 
 ### Admin subjects
 - `GET /api/v1/admin/subjects`
@@ -96,8 +99,15 @@ Teacher and student payloads include:
 
 Classroom and subject payloads include:
 - base fields
+- optional default room fields
 - membership ids
 - assignment counts
+
+Schedule payloads include:
+- the selected classroom
+- repeating weekly slots per day/period
+- subject, teacher, and classroom room data
+- computed display room fields using the fallback order: slot override, subject default, teacher default, classroom default
 
 ## Implementation Notes
 

@@ -30,7 +30,7 @@ module AdminSerialization
       invitation_expires_at: invitation&.expires_at,
       invitation_last_sent_at: invitation&.last_sent_at,
       invitation_accepted_at: invitation&.accepted_at,
-      teacher_profile: user.teacher_profile&.as_json(only: %i[id school_id title bio]),
+      teacher_profile: user.teacher_profile&.as_json(only: %i[id school_id title bio room_name room_label]),
       subject_ids: user.subjects.where(school_id: school.id).pluck(:id),
       classroom_ids: user.teaching_classrooms.where(school_id: school.id).pluck(:id)
     }
@@ -62,6 +62,8 @@ module AdminSerialization
       name: classroom.name,
       grade_level: classroom.grade_level,
       academic_year: classroom.academic_year,
+      room_name: classroom.room_name,
+      room_label: classroom.room_label,
       teacher_ids: classroom.teacher_classrooms.pluck(:user_id),
       student_ids: classroom.classroom_users.pluck(:user_id),
       assignment_count: classroom.assignments.count
@@ -74,6 +76,8 @@ module AdminSerialization
       school_id: subject.school_id,
       name: subject.name,
       code: subject.code,
+      room_name: subject.room_name,
+      room_label: subject.room_label,
       topic_count: subject.subject_topics.count,
       teacher_ids: subject.teacher_subjects.pluck(:teacher_id),
       assignment_count: subject.assignments.count

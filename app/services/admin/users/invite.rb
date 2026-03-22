@@ -68,7 +68,9 @@ module Admin
           user.create_teacher_profile!(
             school: school,
             title: teacher_profile_params[:title],
-            bio: teacher_profile_params[:bio]
+            bio: teacher_profile_params[:bio],
+            room_name: teacher_profile_params[:room_name],
+            room_label: teacher_profile_params[:room_label]
           )
         else
           return if user.student_profile.present?

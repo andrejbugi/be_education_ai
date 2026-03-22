@@ -22,6 +22,7 @@ class User < ApplicationRecord
   has_many :teacher_subjects, foreign_key: :teacher_id, dependent: :destroy
   has_many :subjects, through: :teacher_subjects
 
+  has_many :weekly_schedule_slots, foreign_key: :teacher_id, dependent: :destroy
   has_many :assignments, foreign_key: :teacher_id, inverse_of: :teacher
   has_many :submissions, foreign_key: :student_id, dependent: :destroy
   has_many :grades, foreign_key: :teacher_id

@@ -41,7 +41,7 @@ module Api
       end
 
       def teacher_profile_params
-        params.fetch(:teacher_profile, {}).permit(:school_id, :title, :bio)
+        params.fetch(:teacher_profile, {}).permit(:school_id, :title, :bio, :room_name, :room_label)
       end
 
       def student_profile_params

@@ -111,6 +111,8 @@ Teacher submission detail notes:
 - `GET /admin/classrooms/:id`
 - `PATCH /admin/classrooms/:id`
 - `DELETE /admin/classrooms/:id`
+- `GET /admin/classrooms/:classroom_id/schedule`
+- `PUT /admin/classrooms/:classroom_id/schedule`
 - `GET /admin/subjects`
 - `POST /admin/subjects`
 - `GET /admin/subjects/:id`
@@ -120,6 +122,12 @@ Teacher submission detail notes:
 Admin membership notes:
 - admin teacher/student lists include both current school members and pending invited users for that school
 - `POST /admin/teachers/:id/deactivate` and `POST /admin/students/:id/deactivate` remove access for the selected school only
+
+Admin schedule notes:
+- `Classroom` is the student group (`паралелка`), not a physical room
+- classroom, subject, and teacher profile payloads can include optional `room_name` and `room_label`
+- classroom schedule payloads return weekly `slots` with `day_of_week`, `period_number`, `subject_id`, `teacher_id`, optional per-slot room overrides, and computed `display_room_name`, `display_room_label`, and `display_room_source`
+- schedule replacement is whole-timetable based in v1: send the complete `slots` array for the classroom
 
 ## Calendar
 - `GET /calendar/events`

@@ -24,6 +24,7 @@ module Admin
           assignments: subject.assignments.count,
           announcements: subject.announcements.count,
           attendance_records: subject.attendance_records.count,
+          weekly_schedule_slots: subject.weekly_schedule_slots.count,
           ai_sessions: subject.ai_sessions.count,
           discussion_spaces: subject.discussion_spaces.count
         }.select { |_, count| count.positive? }

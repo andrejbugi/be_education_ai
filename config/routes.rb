@@ -57,6 +57,7 @@ Rails.application.routes.draw do
       namespace :teacher do
         get "dashboard", to: "dashboards#show"
         get "homerooms", to: "homerooms#index"
+        resource :schedule, only: :show, controller: "schedules"
         resources :classrooms, only: %i[index show]
         resources :subjects, only: :index do
           resources :topics, only: :create, controller: "subject_topics"
@@ -81,7 +82,9 @@ Rails.application.routes.draw do
           post :deactivate, on: :member
           put :classrooms, on: :member, action: :assign_classrooms
         end
-        resources :classrooms, only: %i[index create show update destroy]
+        resources :classrooms, only: %i[index create show update destroy] do
+          resource :schedule, only: %i[show update], controller: "classroom_schedules"
+        end
         resources :subjects, only: %i[index create show update destroy]
       end
 
@@ -109,6 +112,7 @@ Rails.application.routes.draw do
       namespace :student do
         get "dashboard", to: "dashboards#show"
         get "performance", to: "performance#show"
+        resource :schedule, only: :show, controller: "schedules"
         resource :daily_quiz, only: :show, controller: "daily_quizzes" do
           post :answer, on: :collection
         end

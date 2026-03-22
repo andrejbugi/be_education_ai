@@ -124,11 +124,11 @@ module Api
         end
 
         def teacher_create_params
-          params.permit(:email, :first_name, :last_name, :locale, teacher_profile: %i[title bio])
+          params.permit(:email, :first_name, :last_name, :locale, teacher_profile: %i[title bio room_name room_label])
         end
 
         def teacher_update_params
-          params.permit(:email, :first_name, :last_name, :locale, teacher_profile: %i[title bio])
+          params.permit(:email, :first_name, :last_name, :locale, teacher_profile: %i[title bio room_name room_label])
         end
 
         def invitation_for(user, role_name:)

@@ -12,6 +12,7 @@
 - Invitations
 - Schools and profiles
 - Classrooms and subjects
+- Weekly schedules
 - Subject topics
 - Assignments and steps
 - Submissions and grades
@@ -51,9 +52,16 @@
 - school-scoped admin setup endpoints now exist under `/api/v1/admin`
 - admins can manage schools, invite teachers and students, and configure classrooms and subjects
 - admins can assign teachers to subjects/classrooms and students to classrooms before teachers begin daily work
+- admins can configure a repeating weekly timetable per classroom (`паралелка`) with one subject/teacher per day and period
 - invitation acceptance is handled through public token-based endpoints under `/api/v1/invitations/:token`
 - inviting an existing email reuses the same account and adds school access only after that invitation is accepted
 - teacher/student deactivation from admin endpoints removes access only for the selected school instead of disabling the whole account
+
+## Weekly schedule capabilities
+- classrooms and subjects can store optional default room fields
+- teacher profiles can store optional default room fields
+- weekly schedule slots can override the room per lesson
+- schedule payloads compute a display room using this fallback order: slot override, subject default, teacher default, classroom default
 
 ## Assignment capabilities
 - assignments support rich `content_json`, teacher notes, and assignment-level resources

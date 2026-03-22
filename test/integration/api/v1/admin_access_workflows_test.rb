@@ -64,7 +64,7 @@ class Api::V1::AdminAccessWorkflowsTest < ActionDispatch::IntegrationTest
            email: "teacher.invited@example.com",
            first_name: "Ивана",
            last_name: "Наставник",
-           teacher_profile: { title: "Проф.", bio: "Математика" }
+           teacher_profile: { title: "Проф.", bio: "Математика", room_name: "Кабинет математика", room_label: "М-1" }
          },
          headers: auth_headers_for(admin, school: school)
 
@@ -77,6 +77,7 @@ class Api::V1::AdminAccessWorkflowsTest < ActionDispatch::IntegrationTest
     assert_equal "pending", invitation.status
     assert_equal 1, ActionMailer::Base.deliveries.size
     assert_equal "pending", payload["invitation_status"]
+    assert_equal "Кабинет математика", payload.dig("teacher_profile", "room_name")
 
     put "/api/v1/admin/teachers/#{teacher.id}/subjects",
         params: { subject_ids: [subject.id] },
@@ -350,18 +351,19 @@ class Api::V1::AdminAccessWorkflowsTest < ActionDispatch::IntegrationTest
     admin = create_admin(school: school)
 
     post "/api/v1/admin/classrooms",
-         params: { name: "8-А", grade_level: "8", academic_year: "2026/2027" },
+         params: { name: "8-А", grade_level: "8", academic_year: "2026/2027", room_name: "Матична училница", room_label: "У8" },
          headers: auth_headers_for(admin, school: school)
 
     assert_response :created
     classroom = Classroom.find(JSON.parse(response.body)["id"])
 
     patch "/api/v1/admin/classrooms/#{classroom.id}",
-          params: { name: "8-Б" },
+          params: { name: "8-Б", room_label: "У9" },
           headers: auth_headers_for(admin, school: school)
 
     assert_response :success
     assert_equal "8-Б", classroom.reload.name
+    assert_equal "У9", classroom.room_label
 
     delete "/api/v1/admin/classrooms/#{classroom.id}",
            headers: auth_headers_for(admin, school: school)
@@ -391,18 +393,19 @@ class Api::V1::AdminAccessWorkflowsTest < ActionDispatch::IntegrationTest
     admin = create_admin(school: school)
 
     post "/api/v1/admin/subjects",
-         params: { name: "Физика", code: "PHY-7" },
+         params: { name: "Физика", code: "PHY-7", room_name: "Лабораторија физика", room_label: "Ф1" },
          headers: auth_headers_for(admin, school: school)
 
     assert_response :created
     subject = Subject.find(JSON.parse(response.body)["id"])
 
     patch "/api/v1/admin/subjects/#{subject.id}",
-          params: { code: "PHY-8" },
+          params: { code: "PHY-8", room_label: "Ф2" },
           headers: auth_headers_for(admin, school: school)
 
     assert_response :success
     assert_equal "PHY-8", subject.reload.code
+    assert_equal "Ф2", subject.room_label
 
     delete "/api/v1/admin/subjects/#{subject.id}",
            headers: auth_headers_for(admin, school: school)
@@ -439,6 +442,52 @@ class Api::V1::AdminAccessWorkflowsTest < ActionDispatch::IntegrationTest
         headers: auth_headers_for(admin, school: school)
 
     assert_response :unprocessable_entity
+  end
+
+  test "admin can manage a repeating weekly classroom schedule with room fallbacks" do
+    school = create_school(code: "SCHEDULE")
+    admin = create_admin(school: school)
+    lead_teacher = create_teacher(school: school, email: "lead.schedule@example.com", first_name: "Лидија", last_name: "Професор")
+    moving_teacher = create_teacher(school: school, email: "moving.schedule@example.com", first_name: "Борис", last_name: "Професор")
+    TeacherProfile.create!(user: lead_teacher, school: school, title: "Проф.", room_name: "Кабинет историја", room_label: "И-2")
+    TeacherProfile.create!(user: moving_teacher, school: school, title: "Проф.")
+    classroom = create_classroom(school: school, teacher: lead_teacher, name: "II-3", grade_level: "II", academic_year: "2026/2027", room_name: "Матична училница II-3", room_label: "У-14")
+    TeacherClassroom.create!(classroom: classroom, user: moving_teacher)
+    subject_with_room = create_subject(school: school, teacher: lead_teacher, name: "Математика", room_name: "Кабинет математика", room_label: "М-3")
+    subject_with_teacher_room = create_subject(school: school, teacher: lead_teacher, name: "Историја")
+    subject_with_classroom_room = create_subject(school: school, teacher: moving_teacher, name: "Македонски")
+
+    put "/api/v1/admin/classrooms/#{classroom.id}/schedule",
+        params: {
+          slots: [
+            { day_of_week: "monday", period_number: 1, subject_id: subject_with_room.id, teacher_id: lead_teacher.id },
+            { day_of_week: "monday", period_number: 2, subject_id: subject_with_teacher_room.id, teacher_id: lead_teacher.id },
+            { day_of_week: "monday", period_number: 3, subject_id: subject_with_classroom_room.id, teacher_id: moving_teacher.id },
+            { day_of_week: "monday", period_number: 4, subject_id: subject_with_classroom_room.id, teacher_id: moving_teacher.id, room_name: "Сала", room_label: "СП" }
+          ]
+        },
+        headers: auth_headers_for(admin, school: school)
+
+    assert_response :success
+    payload = JSON.parse(response.body)
+    assert_equal 4, payload["slots"].length
+    assert_equal "Кабинет математика", payload["slots"][0]["display_room_name"]
+    assert_equal "subject_default", payload["slots"][0]["display_room_source"]
+    assert_equal "Кабинет историја", payload["slots"][1]["display_room_name"]
+    assert_equal "teacher_default", payload["slots"][1]["display_room_source"]
+    assert_equal "Матична училница II-3", payload["slots"][2]["display_room_name"]
+    assert_equal "classroom_default", payload["slots"][2]["display_room_source"]
+    assert_equal "Сала", payload["slots"][3]["display_room_name"]
+    assert_equal "slot", payload["slots"][3]["display_room_source"]
+    assert_equal 3, payload["available_subjects"].length
+    assert_equal 2, payload["available_teachers"].length
+
+    get "/api/v1/admin/classrooms/#{classroom.id}/schedule",
+        headers: auth_headers_for(admin, school: school)
+
+    assert_response :success
+    persisted_payload = JSON.parse(response.body)
+    assert_equal [1, 2, 3, 4], persisted_payload["slots"].map { |slot| slot["period_number"] }
   end
 
   private

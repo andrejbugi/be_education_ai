@@ -144,22 +144,26 @@ module ApiTestFactory
     [invitation, raw_token]
   end
 
-  def create_classroom(school:, teacher: nil, name: nil, grade_level: "7", academic_year: "2025/2026")
+  def create_classroom(school:, teacher: nil, name: nil, grade_level: "7", academic_year: "2025/2026", room_name: nil, room_label: nil)
     classroom = Classroom.create!(
       school: school,
       name: name || unique_value("7-A"),
       grade_level: grade_level,
-      academic_year: academic_year
+      academic_year: academic_year,
+      room_name: room_name,
+      room_label: room_label
     )
     TeacherClassroom.create!(classroom: classroom, user: teacher) if teacher
     classroom
   end
 
-  def create_subject(school:, teacher: nil, name: nil, code: nil)
+  def create_subject(school:, teacher: nil, name: nil, code: nil, room_name: nil, room_label: nil)
     subject = Subject.create!(
       school: school,
       name: name || unique_value("Предмет"),
-      code: code || unique_value("SUB")
+      code: code || unique_value("SUB"),
+      room_name: room_name,
+      room_label: room_label
     )
     TeacherSubject.create!(teacher: teacher, subject: subject) if teacher
     subject

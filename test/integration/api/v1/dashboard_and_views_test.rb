@@ -114,6 +114,80 @@ class Api::V1::DashboardAndViewsTest < ActionDispatch::IntegrationTest
     assert_response :forbidden
   end
 
+  test "teacher schedule returns weekly slots for that teacher" do
+    school = create_school
+    teacher = create_teacher(school: school, first_name: "Ана", last_name: "Петрова")
+    other_teacher = create_teacher(school: school, first_name: "Бојан", last_name: "Марков")
+    classroom = create_classroom(school: school, teacher: teacher, name: "7-A", room_name: "Кабинет 3", room_label: "Lab")
+    other_classroom = create_classroom(school: school, teacher: other_teacher, name: "7-B")
+    subject = create_subject(school: school, teacher: teacher, name: "Физика", room_name: "Физика кабинет")
+    other_subject = create_subject(school: school, teacher: other_teacher, name: "Математика")
+
+    WeeklyScheduleSlot.create!(
+      school: school,
+      classroom: classroom,
+      subject: subject,
+      teacher: teacher,
+      day_of_week: :monday,
+      period_number: 2
+    )
+    WeeklyScheduleSlot.create!(
+      school: school,
+      classroom: other_classroom,
+      subject: other_subject,
+      teacher: other_teacher,
+      day_of_week: :monday,
+      period_number: 3
+    )
+
+    get "/api/v1/teacher/schedule", headers: auth_headers_for(teacher, school: school)
+
+    assert_response :success
+    payload = JSON.parse(response.body)
+    assert_equal teacher.id, payload["teacher"]["id"]
+    assert_equal 1, payload["slots"].length
+    assert_equal "monday", payload["slots"].first["day_of_week"]
+    assert_equal "Физика", payload["slots"].first["subject"]["name"]
+    assert_equal "Физика кабинет", payload["slots"].first["display_room_name"]
+  end
+
+  test "student schedule returns weekly slots for classroom membership" do
+    school = create_school
+    teacher = create_teacher(school: school, first_name: "Јана", last_name: "Трајкова")
+    classroom = create_classroom(school: school, teacher: teacher, name: "6-A", room_label: "B-12")
+    other_classroom = create_classroom(school: school, teacher: teacher, name: "6-B")
+    subject = create_subject(school: school, teacher: teacher, name: "Историја")
+    other_subject = create_subject(school: school, teacher: teacher, name: "Биологија")
+    student = create_student(school: school, classroom: classroom, first_name: "Мила")
+
+    WeeklyScheduleSlot.create!(
+      school: school,
+      classroom: classroom,
+      subject: subject,
+      teacher: teacher,
+      day_of_week: :wednesday,
+      period_number: 1
+    )
+    WeeklyScheduleSlot.create!(
+      school: school,
+      classroom: other_classroom,
+      subject: other_subject,
+      teacher: teacher,
+      day_of_week: :thursday,
+      period_number: 4
+    )
+
+    get "/api/v1/student/schedule", headers: auth_headers_for(student, school: school)
+
+    assert_response :success
+    payload = JSON.parse(response.body)
+    assert_equal student.id, payload["student"]["id"]
+    assert_equal 1, payload["slots"].length
+    assert_equal "wednesday", payload["slots"].first["day_of_week"]
+    assert_equal "Историја", payload["slots"].first["subject"]["name"]
+    assert_equal "B-12", payload["slots"].first["display_room_label"]
+  end
+
   test "student assignments index excludes draft assignments" do
     school = create_school
     teacher = create_teacher(school: school)

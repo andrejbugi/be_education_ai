@@ -56,7 +56,7 @@ module Api
         end
 
         def subject_params
-          params.permit(:name, :code)
+          params.permit(:name, :code, :room_name, :room_label)
         end
       end
     end
