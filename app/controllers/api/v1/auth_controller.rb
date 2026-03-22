@@ -51,6 +51,7 @@ module Api
 
       def resolve_school_for(user)
         return nil unless user.schools.exists?
+        return nil if user.has_role?("admin") && login_params[:school_id].blank?
 
         if login_params[:school_id].present?
           user.schools.find_by(id: login_params[:school_id])

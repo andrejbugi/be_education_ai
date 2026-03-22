@@ -34,6 +34,58 @@ class Api::V1::AuthProfileAndSchoolsTest < ActionDispatch::IntegrationTest
     assert_response :forbidden
   end
 
+  test "admin can log in without school membership" do
+    admin_role = Role.find_or_create_by!(name: "admin")
+    admin = User.create!(
+      email: "admin.no.school@example.com",
+      password: "password123",
+      password_confirmation: "password123",
+      first_name: "Admin",
+      last_name: "NoSchool",
+      active: true
+    )
+    UserRole.create!(user: admin, role: admin_role)
+
+    post "/api/v1/auth/login", params: {
+      email: admin.email,
+      password: "password123"
+    }
+
+    assert_response :success
+    body = JSON.parse(response.body)
+    assert_equal admin.id, body.dig("user", "id")
+    assert_nil body["school"]
+
+    get "/api/v1/auth/me"
+
+    assert_response :success
+    me = JSON.parse(response.body)
+    assert_equal [], me["schools"]
+    assert_nil me["current_school"]
+  end
+
+  test "admin login does not force current school when school id is omitted" do
+    school = create_school(code: "ADMIN-AUTH")
+    admin = create_admin(school: school, email: "admin.school.member@example.com")
+
+    post "/api/v1/auth/login", params: {
+      email: admin.email,
+      password: "password123"
+    }
+
+    assert_response :success
+    body = JSON.parse(response.body)
+    assert_equal admin.id, body.dig("user", "id")
+    assert_nil body["school"]
+
+    get "/api/v1/auth/me"
+
+    assert_response :success
+    me = JSON.parse(response.body)
+    assert_equal school.id, me["schools"].first["id"]
+    assert_nil me["current_school"]
+  end
+
   test "me requires authentication" do
     get "/api/v1/auth/me"
 

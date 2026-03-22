@@ -20,6 +20,7 @@ Auth notes:
 - `POST /auth/login` sets an encrypted `HttpOnly` auth session cookie
 - `DELETE /auth/logout` revokes the current cookie-backed server session when present
 - `GET /auth/me` works with the auth cookie and includes `current_school`, `session_authenticated`, and `session_expires_at`
+- admins may log in without selecting a school first; teacher and student flows still resolve school context
 
 ## Schools and profile
 - `GET /schools`
@@ -122,6 +123,8 @@ Teacher submission detail notes:
 Admin membership notes:
 - admin teacher/student lists include both current school members and pending invited users for that school
 - `POST /admin/teachers/:id/deactivate` and `POST /admin/students/:id/deactivate` remove access for the selected school only
+- school `name` must be unique
+- school `code` must be unique when present
 
 Admin schedule notes:
 - `Classroom` is the student group (`паралелка`), not a physical room

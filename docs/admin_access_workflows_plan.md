@@ -15,7 +15,7 @@ The first release covers:
 - teacher to classroom assignment
 - student to classroom assignment
 
-Admin remains school-scoped in v1. School-bound admin endpoints require `X-School-Id` and only operate inside schools where the admin is a member.
+Admin remains school-scoped in v1 for school-bound operations. Admins can authenticate without selecting a school first, and school-bound admin endpoints require `X-School-Id` and only operate inside schools where the admin is a member.
 
 ## Main API Surface
 
@@ -26,6 +26,11 @@ Admin remains school-scoped in v1. School-bound admin endpoints require `X-Schoo
 - `PATCH /api/v1/admin/schools/:id`
 - `POST /api/v1/admin/schools/:id/deactivate`
 - `POST /api/v1/admin/schools/:id/reactivate`
+
+School validation notes:
+- `name` must be unique
+- `code` must be unique when present
+- duplicate create and update requests should return model validation errors
 
 ### Admin teachers
 - `GET /api/v1/admin/teachers`

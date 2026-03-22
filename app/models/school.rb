@@ -24,5 +24,6 @@ class School < ApplicationRecord
   has_many :conversations, dependent: :destroy
   has_many :discussion_spaces, dependent: :destroy
 
-  validates :name, presence: true
+  validates :name, presence: true, uniqueness: true
+  validates :code, uniqueness: true, allow_nil: true
 end

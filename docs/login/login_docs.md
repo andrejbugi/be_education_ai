@@ -43,7 +43,8 @@ Notes:
 - `email` and `password` are required.
 - `school_id` is optional.
 - if `school_id` is sent, the user must belong to that school
-- if `school_id` is omitted and the user belongs to schools, backend picks the first school ordered by name
+- if `school_id` is omitted and the user is a teacher or student who belongs to schools, backend picks the first school ordered by name
+- if `school_id` is omitted and the user is an admin, login succeeds without forcing a selected school
 
 ## Login success response
 
@@ -107,6 +108,7 @@ Response:
 ```
 
 Typical FE behavior:
+- admins can log in without a school dropdown and choose or create a school after authentication
 - if there is one school, auto-select it
 - if there are multiple schools, let the user choose and send that choice as `X-School-Id`
 - route by role after login or `me`
