@@ -13,6 +13,8 @@ This project uses cookie-based authentication plus optional school context.
 4. FE sends requests with credentials included.
 5. FE can restore session state with `GET /api/v1/auth/me`.
 
+Forgot-password should use the public password reset flow instead of the school-scoped login flow.
+
 ## Login endpoint
 
 `POST /api/v1/auth/login`
@@ -139,3 +141,15 @@ FE should:
 - use `credentials: 'include'` on protected requests
 - attach `X-School-Id` when the request is school-scoped
 - on `401`, clear auth state and redirect to login
+
+## Password reset
+
+Use the public reset flow when the user forgot their password:
+- `POST /api/v1/password_resets`
+- `GET /api/v1/password_resets/:token`
+- `POST /api/v1/password_resets/:token/confirm`
+
+This flow is account-level and does not require `X-School-Id`.
+
+Full guide:
+- [password_reset.md](/home/andrejbugi/projects/be_education_ai/docs/password_reset.md)

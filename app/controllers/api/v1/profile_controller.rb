@@ -6,13 +6,16 @@ module Api
           user: current_user.as_json(only: %i[id email first_name last_name locale active]),
           roles: current_user.roles.pluck(:name),
           teacher_profile: current_user.teacher_profile,
-          student_profile: current_user.student_profile
+          student_profile: current_user.student_profile,
+          accessibility: current_user.accessibility_settings
         }
       end
 
       def update
         User.transaction do
           current_user.update!(user_params)
+          current_user.assign_accessibility_settings(accessibility_params) if accessibility_params.present?
+          current_user.save! if accessibility_params.present?
 
           if current_user.has_role?("teacher")
             profile = current_user.teacher_profile || current_user.build_teacher_profile
@@ -28,7 +31,8 @@ module Api
         render json: {
           user: current_user.reload.as_json(only: %i[id email first_name last_name locale active]),
           teacher_profile: current_user.teacher_profile,
-          student_profile: current_user.student_profile
+          student_profile: current_user.student_profile,
+          accessibility: current_user.accessibility_settings
         }
       rescue ActiveRecord::RecordInvalid => e
         render json: { errors: e.record.errors.full_messages }, status: :unprocessable_entity
@@ -38,6 +42,10 @@ module Api
 
       def user_params
         params.permit(:first_name, :last_name, :locale)
+      end
+
+      def accessibility_params
+        params.fetch(:accessibility, {}).permit(:font_scale, :contrast_mode, :reading_font, :reduce_motion)
       end
 
       def teacher_profile_params

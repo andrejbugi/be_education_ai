@@ -8,6 +8,9 @@ Rails.application.routes.draw do
       post "auth/login", to: "auth#login"
       delete "auth/logout", to: "auth#logout"
       get "auth/me", to: "auth#me"
+      resources :password_resets, only: %i[create show], param: :token do
+        post :confirm, on: :member
+      end
       resources :invitations, only: :show, param: :token do
         post :accept, on: :member
       end

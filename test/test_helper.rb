@@ -265,6 +265,11 @@ module ApiTestFactory
     body[%r{/invitations/([^/\s<]+)}, 1]
   end
 
+  def extract_password_reset_token(email)
+    body = email.text_part&.body&.decoded || email.html_part&.body&.decoded || email.body.decoded
+    body[%r{/reset-password/([^/\s<]+)}, 1]
+  end
+
   def create_submission(assignment:, student:, status: :submitted, started_at: 2.days.ago, submitted_at: 1.day.ago, reviewed_at: nil, total_score: nil, late: false)
     Submission.create!(
       assignment: assignment,

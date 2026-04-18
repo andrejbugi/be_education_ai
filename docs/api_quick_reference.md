@@ -15,12 +15,18 @@ Base path: `/api/v1`
 - `POST /auth/login`
 - `DELETE /auth/logout`
 - `GET /auth/me`
+- `POST /password_resets`
+- `GET /password_resets/:token`
+- `POST /password_resets/:token/confirm`
 
 Auth notes:
 - `POST /auth/login` sets an encrypted `HttpOnly` auth session cookie
 - `DELETE /auth/logout` revokes the current cookie-backed server session when present
 - `GET /auth/me` works with the auth cookie and includes `current_school`, `session_authenticated`, and `session_expires_at`
 - admins may log in without selecting a school first; teacher and student flows still resolve school context
+- password reset is account-level and does not require `X-School-Id`
+- successful password reset revokes all active auth sessions for the user
+- see [password_reset.md](/home/andrejbugi/projects/be_education_ai/docs/password_reset.md) for flow details and local testing steps
 
 ## Schools and profile
 - `GET /schools`
@@ -29,6 +35,12 @@ Auth notes:
 - `POST /invitations/:token/accept`
 - `GET /profile`
 - `PATCH /profile`
+
+Profile notes:
+- `GET /profile` returns normalized user accessibility preferences under top-level `accessibility`
+- `PATCH /profile` accepts partial accessibility updates under `accessibility`
+- supported accessibility fields are `font_scale`, `contrast_mode`, `reading_font`, and `reduce_motion`
+- see [accessibility_preferences.md](/home/andrejbugi/projects/be_education_ai/docs/accessibility_preferences.md) for request/response examples
 
 Invitation notes:
 - user email is global, but school access is school-scoped

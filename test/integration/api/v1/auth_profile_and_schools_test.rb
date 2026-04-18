@@ -104,6 +104,15 @@ class Api::V1::AuthProfileAndSchoolsTest < ActionDispatch::IntegrationTest
     assert_equal ["teacher"], payload["roles"]
     assert_equal "Наставник", payload["teacher_profile"]["title"]
     assert_equal "Кабинет 12", payload["teacher_profile"]["room_name"]
+    assert_equal(
+      {
+        "font_scale" => "md",
+        "contrast_mode" => "default",
+        "reading_font" => "default",
+        "reduce_motion" => false
+      },
+      payload["accessibility"]
+    )
   end
 
   test "profile update persists teacher profile changes" do
@@ -126,6 +135,54 @@ class Api::V1::AuthProfileAndSchoolsTest < ActionDispatch::IntegrationTest
     assert_equal "Ново", teacher.first_name
     assert_equal "Наслов", teacher.teacher_profile.title
     assert_equal "Лабораторија", teacher.teacher_profile.room_name
+  end
+
+  test "profile update persists accessibility preferences and keeps unspecified defaults" do
+    school = create_school
+    teacher = create_teacher(school: school)
+
+    patch "/api/v1/profile", params: {
+      accessibility: {
+        font_scale: "lg",
+        contrast_mode: "high"
+      }
+    }, headers: auth_headers_for(teacher, school: school)
+
+    assert_response :success
+
+    payload = JSON.parse(response.body)
+    assert_equal "lg", payload.dig("accessibility", "font_scale")
+    assert_equal "high", payload.dig("accessibility", "contrast_mode")
+    assert_equal "default", payload.dig("accessibility", "reading_font")
+    assert_equal false, payload.dig("accessibility", "reduce_motion")
+
+    teacher.reload
+    assert_equal(
+      {
+        "font_scale" => "lg",
+        "contrast_mode" => "high",
+        "reading_font" => "default",
+        "reduce_motion" => false
+      },
+      teacher.accessibility_settings
+    )
+  end
+
+  test "profile update rejects invalid accessibility preference values" do
+    school = create_school
+    teacher = create_teacher(school: school)
+
+    patch "/api/v1/profile", params: {
+      accessibility: {
+        font_scale: "xxl",
+        reduce_motion: "sometimes"
+      }
+    }, headers: auth_headers_for(teacher, school: school)
+
+    assert_response :unprocessable_entity
+    payload = JSON.parse(response.body)
+    assert_includes payload["errors"], "Settings accessibility font_scale is invalid"
+    assert_includes payload["errors"], "Settings accessibility reduce_motion must be true or false"
   end
 
   test "profile update persists student profile changes" do

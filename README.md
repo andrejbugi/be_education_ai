@@ -39,6 +39,8 @@ Detailed guide with request/response examples:
 - [schools_frontend_guide.md](/home/andrejbugi/projects/be_education_ai/docs/schools_frontend_guide.md)
 - [seeded_school_data_summary.md](/home/andrejbugi/projects/be_education_ai/docs/seeded_school_data_summary.md)
 - [ai_provider_setup.md](/home/andrejbugi/projects/be_education_ai/docs/ai_provider_setup.md)
+- [accessibility_preferences.md](/home/andrejbugi/projects/be_education_ai/docs/accessibility_preferences.md)
+- [password_reset.md](/home/andrejbugi/projects/be_education_ai/docs/password_reset.md)
 
 ## AI Provider Setup
 

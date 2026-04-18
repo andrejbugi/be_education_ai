@@ -1,6 +1,18 @@
 class User < ApplicationRecord
   has_secure_password
 
+  ACCESSIBILITY_DEFAULTS = {
+    "font_scale" => "md",
+    "contrast_mode" => "default",
+    "reading_font" => "default",
+    "reduce_motion" => false
+  }.freeze
+  ACCESSIBILITY_ALLOWED_VALUES = {
+    "font_scale" => %w[sm md lg xl].freeze,
+    "contrast_mode" => %w[default high].freeze,
+    "reading_font" => %w[default dyslexic].freeze
+  }.freeze
+
   has_many :user_roles, dependent: :destroy
   has_many :roles, through: :user_roles
 
@@ -59,7 +71,10 @@ class User < ApplicationRecord
 
   validates :email, presence: true, uniqueness: { case_sensitive: false }
 
+  before_validation :normalize_settings
   before_validation :normalize_email
+
+  validate :validate_accessibility_settings
 
   def has_role?(role_name)
     roles.any? { |role| role.name == role_name.to_s }
@@ -74,9 +89,59 @@ class User < ApplicationRecord
     [first_name, last_name].compact.join(" ").strip.presence || email
   end
 
+  def accessibility_settings
+    stored_settings = settings.is_a?(Hash) ? settings : {}
+    stored_accessibility = stored_settings.fetch("accessibility", {})
+
+    ACCESSIBILITY_DEFAULTS.merge(stored_accessibility.is_a?(Hash) ? stored_accessibility : {})
+  end
+
+  def assign_accessibility_settings(attributes)
+    incoming = attributes.respond_to?(:to_h) ? attributes.to_h : {}
+    normalized = incoming.deep_stringify_keys.slice(*ACCESSIBILITY_DEFAULTS.keys)
+
+    self.settings = normalized_settings.merge(
+      "accessibility" => accessibility_settings.merge(normalized)
+    )
+  end
+
   private
+
+  def normalize_settings
+    self.settings = normalized_settings
+  end
 
   def normalize_email
     self.email = email.to_s.downcase.strip
+  end
+
+  def normalized_settings
+    settings.is_a?(Hash) ? settings.deep_stringify_keys : {}
+  end
+
+  def validate_accessibility_settings
+    accessibility = normalized_settings["accessibility"]
+    return if accessibility.blank?
+
+    unless accessibility.is_a?(Hash)
+      errors.add(:settings, "accessibility must be an object")
+      return
+    end
+
+    unsupported_keys = accessibility.keys - ACCESSIBILITY_DEFAULTS.keys
+    if unsupported_keys.any?
+      errors.add(:settings, "accessibility contains unsupported keys: #{unsupported_keys.sort.join(', ')}")
+    end
+
+    ACCESSIBILITY_ALLOWED_VALUES.each do |key, allowed_values|
+      next if accessibility[key].blank?
+      next if allowed_values.include?(accessibility[key])
+
+      errors.add(:settings, "accessibility #{key} is invalid")
+    end
+
+    return if accessibility["reduce_motion"].in?([true, false, nil])
+
+    errors.add(:settings, "accessibility reduce_motion must be true or false")
   end
 end
