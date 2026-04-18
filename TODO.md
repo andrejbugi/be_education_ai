@@ -1,37 +1,27 @@
-For later in the future..
+Current roadmap / pending work
 
-It should have chat option between students and the teachers. Also between teachers.
-Settings to increase font size, high contrast, font for dyslecsic, etc.
-A way to divide schools, probably with subdomain.
-Create a demo for people to test. Create a tutorial, courses for learning how to use the system.
-Teachers should be able to copy/save tasks or assignments as reusable templates, then publish or assign them across different classes if needed, and later even across different schools.
+Implemented already:
+- direct chat between teachers and between teacher/student pairs with an allowed shared-school/shared-classroom relationship
+- user accessibility preferences through profile settings:
+  - larger font presets
+  - high contrast mode
+  - dyslexic reading font preference
+  - reduced motion preference
+- forgot password / reset password flow with reset token email delivery and password confirmation endpoint
 
-Very short shape:
+Still pending:
+- divide schools more strictly, likely with subdomain-based tenant resolution instead of `X-School-Id`
+- decide whether auth cookies should stay host-only for strict tenant isolation or use a parent-domain cookie for cross-subdomain SSO with stronger tenant checks
+- create a demo for people to test
+- create tutorial / onboarding / training materials for how to use the system
+- let teachers copy/save assignments as reusable templates, publish them across multiple classes, and later possibly across different schools
 
-conversations table: school_id, conversation_type (direct, maybe later group), timestamps
-conversation_participants table: which users are in the thread
-messages table: conversation_id, sender_id, body, maybe attachments/read_at/deleted_at later
-Rules:
+Chat / messaging roadmap still pending:
+- group conversations are not enabled yet
+- student-student direct chat stays disabled unless explicitly enabled later
+- realtime chat events over Action Cable are not implemented yet
 
-teacher-teacher: allow same-school teachers to start direct conversations
-teacher-student: allow only if they share a classroom/assignment/school relationship you approve
-student-student: keep disabled unless you explicitly want it later
-API would likely be:
-
-GET /api/v1/conversations
-POST /api/v1/conversations
-GET /api/v1/conversations/:id/messages
-POST /api/v1/conversations/:id/messages
-
-Performance / scaling:
-
-- Cache classroom student lists where possible, since class membership changes rarely, usually only every few months.
-- Do not generate performance snapshots on every dashboard request long-term.
-- Prefer background jobs for performance snapshot generation, then serve cached / stored snapshot data in dashboard responses.
-
-Auth:
-
-- Add forgot password / reset password functionality.
-- This should include reset token handling, email delivery, and reset confirmation endpoint(s).
-- For subdomain multi-tenancy like `school1.myapplication.gov.mk`, resolve school context from subdomain instead of `X-School-Id`, scope auth sessions to that tenant, and block cross-tenant access.
-- Decide whether auth cookies should stay host-only for strict school isolation or use a parent-domain cookie for cross-subdomain SSO with stronger tenant checks.
+Performance / scaling still pending:
+- cache classroom student lists where useful
+- stop generating performance snapshots on every dashboard request long-term
+- move performance snapshot generation toward background jobs / cached stored snapshots

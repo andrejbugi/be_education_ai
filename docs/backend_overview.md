@@ -9,13 +9,18 @@
 ## Main domains
 - Auth
 - Auth sessions
+- Password resets
 - Invitations
 - Schools and profiles
+- Accessibility preferences
 - Classrooms and subjects
 - Weekly schedules
 - Subject topics
 - Assignments and steps
 - Submissions and grades
+- Chat messaging
+- Discussion spaces
+- Gamification and student progress
 - Quiz of the Day and Learning Games
 - Assignment resources and file uploads
 - Step answer checking
@@ -47,6 +52,14 @@
 - logout now revokes the current server-side session instead of only relying on client token removal
 - `GET /auth/me` can use the auth cookie and returns session metadata
 - Action Cable authenticates from the auth cookie
+- password reset now uses public token-based endpoints under `/api/v1/password_resets/:token`
+- password reset is account-level, not school-scoped
+- successful password reset revokes all active auth sessions for the user
+
+## Profile and accessibility capabilities
+- `GET /profile` and `PATCH /profile` now expose user accessibility preferences
+- accessibility preferences are stored per user, not per school
+- current supported preferences are font scale, contrast mode, reading font, and reduced motion
 
 ## Admin capabilities
 - school-scoped admin setup endpoints now exist under `/api/v1/admin`
@@ -75,6 +88,25 @@
 - teachers can load their available subjects together with reusable `topics`
 - teachers can create new reusable topics under a subject
 - school detail payloads also include subject topics for school-scoped setup screens
+
+## Chat messaging capabilities
+- direct conversations are available under `/api/v1/conversations`
+- teacher-teacher chat is allowed within the same school
+- teacher-student chat is allowed only when they share a classroom relationship allowed by the backend
+- student-student direct chat stays blocked
+- per-message delivery, read, reaction, and presence endpoints are implemented
+- group conversations are not enabled yet
+- Redis-backed Action Cable is configured, but chat realtime events are not implemented yet
+
+## Discussion capabilities
+- scoped discussion spaces, threads, and posts are implemented
+- teacher/admin moderation supports lock, unlock, pin, unpin, archive, hide, and unhide flows
+- discussion visibility rules are enforced by scope and role policy checks
+
+## Gamification capabilities
+- student progress profiles track XP, levels, streaks, and milestone badges
+- student dashboard and student performance responses include progress data
+- there is no standalone gamification endpoint yet
 
 ## Quiz and learning games capabilities
 - daily quiz is a separate lightweight domain and is not modeled as an assignment

@@ -29,6 +29,13 @@ Health check:
 Detailed guide with request/response examples:
 [docs/login_docs.md](/home/andrejbugi/projects/be_education_ai/docs/login/login_docs.md)
 
+## Local Mail In Development
+
+Development mail delivery is written to:
+`tmp/mails`
+
+This is useful for invitation and password reset testing without configuring SMTP.
+
 ## Backend Docs
 - [backend_overview.md](/home/andrejbugi/projects/be_education_ai/docs/backend_overview.md)
 - [phase1_data_model.md](/home/andrejbugi/projects/be_education_ai/docs/phase1_data_model.md)
